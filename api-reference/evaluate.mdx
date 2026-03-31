@@ -15,7 +15,7 @@ The evaluation endpoint is the primary way to get flag values when you're not us
 
 ```bash
 POST /evaluator/evaluate
-Authorization: Bearer ff_your_sdk_key
+x-api-key: ff_your_sdk_key
 Content-Type: application/json
 ```
 
@@ -96,10 +96,10 @@ The response is a flat object where each key is a flag key and each value is the
 
 The evaluation endpoint uses your **SDK key** (not a JWT or admin key). SDK keys start with `ff_` and are scoped to a specific project and environment.
 
-Pass the key as a Bearer token:
+Pass the key using the `x-api-key` header:
 
 ```
-Authorization: Bearer ff_177331b0f7adabf1b75e026762c1acc005bff9d244eff5ebe98d1aff69c2df34
+x-api-key: ff_177331b0f7adabf1b75e026762c1acc005bff9d244eff5ebe98d1aff69c2df34
 ```
 
 SDK keys only grant access to the evaluation endpoint. They cannot create, update, or delete flags.
@@ -134,12 +134,57 @@ The evaluation endpoint returns rate limit headers:
 
 When rate limited (429), the SDK should use cached values and retry after the reset time.
 
+## WebSocket Connection
+
+For real-time flag updates without polling, connect via WebSocket instead of HTTP:
+
+```javascript
+const ws = new WebSocket('wss://api.flagmint.com/ws/sdk');
+
+ws.onopen = () => {
+  // Send SDK key and context
+  ws.send(JSON.stringify({
+    type: 'init',
+    sdkKey: 'ff_your_sdk_key',
+    context: {
+      kind: 'user',
+      key: 'user-123',
+      country: 'IE'
+    }
+  }));
+};
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  // Receive flag evaluations
+  console.log('Flags:', data.flags);
+};
+```
+
+### WebSocket Benefits
+
+- **Instant updates** — Flag changes pushed immediately (no cache delay)
+- **Lower latency** — Persistent connection eliminates handshake overhead
+- **Reduced bandwidth** — Only changed flags are sent
+- **Automatic reconnection** — Built-in connection management
+
+### HTTP Long-Polling Fallback
+
+If WebSocket isn't available (firewall restrictions, legacy browsers), the SDK automatically falls back to HTTP long-polling:
+
+```bash
+POST /evaluator/poll
+x-api-key: ff_your_sdk_key
+```
+
+The server holds the connection open until flags change or a timeout occurs (60s), then responds with updated flags.
+
 ## Caching Behaviour
 
 The server caches flag configuration in Redis with a 10-second TTL. This means:
 
-- Flag changes in the dashboard are reflected within 10 seconds on the REST endpoint
-- WebSocket transport pushes changes immediately (no cache delay)
+- Flag changes in the dashboard are reflected within 10 seconds on REST endpoint
+- WebSocket connections receive changes instantly (no cache delay)
 - Under high load, most requests are served from cache without hitting the database
 
 ## Testing with curl
@@ -147,7 +192,7 @@ The server caches flag configuration in Redis with a 10-second TTL. This means:
 ```bash
 curl -X POST https://api.flagmint.com/evaluator/evaluate \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ff_your_sdk_key" \
+  -H "x-api-key: ff_your_sdk_key" \
   -d '{
     "context": {
       "kind": "user",
@@ -157,9 +202,58 @@ curl -X POST https://api.flagmint.com/evaluator/evaluate \
   }'
 ```
 
-## Testing with the SDK Tester
+## Testing with the Flagmint SDK Tester
 
-For visual testing without writing code, use the [Flagmint SDK Tester](/resources/troubleshooting#sdk-tester) — a standalone app that connects to the evaluation endpoint and displays flags in real-time.
+For visual testing without writing code, use the **Flagmint SDK Tester** — a standalone testing tool built specifically for QA and debugging.
+
+### What is the SDK Tester?
+
+The SDK Tester connects directly to your Flagmint API using the raw wire protocol (WebSocket or HTTP long-polling). It doesn't use any Flagmint SDK — this is intentional, so you're testing the server contract, not the SDK's interpretation of it.
+
+### Key Features
+
+- 🔌 **Dual Transport Support** — Switch between WebSocket and HTTP long-polling
+- 🎯 **Visual Context Builder** — Add/remove context key-value pairs via UI
+- 🚩 **Live Flag Display** — See all flags with real-time updates
+- 📡 **Protocol Logging** — View raw WebSocket messages and connection events
+- ⚡ **Context Presets** — Quick setups for common scenarios (simple user, multi-context, empty)
+- 📊 **Change History** — Track flag value changes over time
+
+### Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/jtad009/flagmint-sdk-tester.git
+cd flagmint-sdk-tester
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser, enter your API URL and SDK key, and start testing!
+
+### Basic Workflow
+
+1. **Configure Connection** — Enter your API URL and SDK key, choose transport (WebSocket or long-polling)
+2. **Set Up Context** — Use a preset or manually add context fields (e.g., `kind: user`, `key: test-user-123`)
+3. **Connect & Test** — Click "Connect" and "Send Context" to evaluate flags
+4. **Verify Updates** — Change a flag in the dashboard and watch it update instantly in the tester
+
+### QA Testing Checklist
+
+- ✅ Flag evaluates with correct default value
+- ✅ Flag respects user targeting rules
+- ✅ Flag respects multi-context targeting
+- ✅ Flag updates in real-time when changed in dashboard
+- ✅ WebSocket connection is stable (no disconnects)
+- ✅ Long-polling fallback works correctly
+- ✅ Empty context returns expected defaults
+- ✅ Custom context attributes are evaluated correctly
+
+**GitHub Repository:** [https://github.com/jtad009/flagmint-sdk-tester](https://github.com/jtad009/flagmint-sdk-tester)
 
 ## Next Steps
 

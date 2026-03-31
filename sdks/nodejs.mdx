@@ -1,8 +1,655 @@
 ---
-title: "Nodejs"
-description: "Coming soon."
+title: "Node.js / JavaScript SDK"
+description: "Framework-agnostic JavaScript SDK for evaluating feature flags with pluggable caching and real-time updates"
 ---
 
+# Flagmint JavaScript SDK
+
+The Flagmint JavaScript SDK is a framework-agnostic client for evaluating feature flags with pluggable caching and flexible transport strategies. It works seamlessly in both browser and Node.js server-side environments.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="#quick-start">
+    Get up and running in minutes
+  </Card>
+  <Card title="React Integration" icon="react" href="#react">
+    Framework-specific examples
+  </Card>
+  <Card title="Configuration" icon="gear" href="#configuration">
+    Customize caching and transport
+  </Card>
+  <Card title="API Reference" icon="code" href="#api-reference">
+    Complete method documentation
+  </Card>
+</CardGroup>
+
+## ✨ Key Features
+
+- 🎯 **Framework-Agnostic** - Works with React, Vue, vanilla JS, Node.js, and more
+- 🔄 **Flexible Transport** - WebSocket for real-time updates or long-polling fallback
+- 💾 **Pluggable Caching** - Built-in sync cache, async cache (Redis/filesystem), or custom implementations
+- 🚀 **Server & Browser Support** - Compatible with browser, Node.js, and React Native
+- 🔒 **Type-Safe** - Full TypeScript support with comprehensive type definitions
+- ⚡ **Zero-Config Defaults** - Works out of the box with sensible defaults
+
+## 📦 Installation
+
+<CodeGroup>
+```bash npm
+npm install flagmint-js-sdk
+```
+
+```bash yarn
+yarn add flagmint-js-sdk
+```
+
+```bash pnpm
+pnpm add flagmint-js-sdk
+```
+</CodeGroup>
+
 <Note>
-  This page is under construction. Check back soon or [contact us](mailto:support@flagmint.com) if you need this information now.
+  **TypeScript Support**: The SDK includes built-in TypeScript declarations with full type safety.
 </Note>
+
+## 🚀 Quick Start
+
+```javascript
+import { FlagClient } from 'flagmint-js-sdk';
+
+// Create a client instance
+const client = new FlagClient({
+  apiKey: 'ff_your_api_key_here',
+  context: {
+    kind: "multi",
+    user: { 
+      kind: "user", 
+      key: 'user123', 
+      email: 'user@example.com' 
+    },
+    organization: { 
+      kind: "organization", 
+      key: 'org456', 
+      plan: 'premium' 
+    }
+  }
+});
+
+// Wait for initial connection
+await client.ready();
+
+// Get flag values
+const showBanner = client.getFlag('show_banner', false);
+const featureVersion = client.getFlag('feature_version', 'v1');
+
+// Update context and re-evaluate
+client.updateContext({ 
+  user: { 
+    key: 'user456',
+    email: 'newuser@example.com'
+  }
+});
+```
+
+## ⚙️ Configuration
+
+### FlagClientOptions
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `apiKey` | `string` | **Required** | Your environment API key |
+| `context` | `Record<string, any>` | `{}` | Initial evaluation context (user attributes, org, etc.) |
+| `enableOfflineCache` | `boolean` | `false` | Enable caching of flags locally |
+| `persistContext` | `boolean` | `false` | Persist evaluation context across sessions |
+| `cacheAdapter` | `CacheAdapter` | Sync helper | Custom cache implementation |
+| `transportMode` | `'auto'` \| `'websocket'` \| `'long-polling'` | `'auto'` | Transport strategy for flag updates |
+| `onError` | `(error: Error) => void` | `undefined` | Callback for transport or initialization errors |
+| `previewMode` | `boolean` | `false` | Evaluate using rawFlags only, bypassing remote fetch |
+| `rawFlags` | `Record<string, any>` | `undefined` | Local-only flag definitions for preview mode |
+| `deferInitialization` | `boolean` | `false` | If true, client initialization is deferred until `init()` is called |
+
+### Context Structure
+
+The `context` object should follow this structure:
+
+```typescript
+{
+  kind: "multi" | "user" | "organization",
+  user?: {
+    kind: "user",
+    key: string,        // Unique user identifier
+    email?: string,
+    name?: string,
+    // ... any custom attributes
+  },
+  organization?: {
+    kind: "organization",
+    key: string,        // Unique org identifier
+    plan?: string,
+    // ... any custom attributes
+  }
+}
+```
+
+## 💾 Cache Adapters
+
+### Sync (Browser / In-Memory)
+
+By default, the SDK uses a sync `localStorage`-based helper in browsers or a `Map` in Node.js:
+
+```javascript
+import { FlagClient } from 'flagmint-js-sdk';
+import { setCacheStorage } from 'flagmint-js-sdk/core/cacheHelper';
+
+// For Node.js, override with custom storage
+const myMap = new Map();
+setCacheStorage({
+  getItem: (key) => myMap.get(key) ?? null,
+  setItem: (key, val) => myMap.set(key, val),
+});
+
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  enableOfflineCache: true
+});
+```
+
+### Async (Redis / File System)
+
+Use the async helper for server-side or React Native:
+
+```javascript
+import { FlagClient } from 'flagmint-js-sdk';
+import * as asyncCache from 'flagmint-js-sdk/core/cacheHelper.async';
+
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  cacheAdapter: {
+    loadFlags: asyncCache.loadCachedFlags,
+    saveFlags: asyncCache.saveCachedFlags,
+    loadContext: asyncCache.loadCachedContext,
+    saveContext: asyncCache.saveCachedContext
+  }
+});
+```
+
+### Custom Cache (Redis Example)
+
+```javascript
+import { FlagClient } from 'flagmint-js-sdk';
+import redis from 'redis';
+
+const redisClient = redis.createClient();
+
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  cacheAdapter: {
+    loadFlags: async (apiKey) => {
+      const cached = await redisClient.get(`flags:${apiKey}`);
+      return cached ? JSON.parse(cached) : null;
+    },
+    saveFlags: async (apiKey, flags) => {
+      await redisClient.setex(
+        `flags:${apiKey}`, 
+        600, // 10 min TTL
+        JSON.stringify(flags)
+      );
+    },
+    loadContext: async (apiKey) => {
+      const cached = await redisClient.get(`context:${apiKey}`);
+      return cached ? JSON.parse(cached) : null;
+    },
+    saveContext: async (apiKey, context) => {
+      await redisClient.setex(
+        `context:${apiKey}`, 
+        3600, // 1 hour TTL
+        JSON.stringify(context)
+      );
+    }
+  }
+});
+```
+
+## 🌐 Transport Modes
+
+The SDK supports three transport strategies:
+
+| Mode | Latency | Resource Usage | Best For |
+|------|---------|----------------|----------|
+| **WebSocket** | Lowest (real-time) | Efficient | Real-time dashboards, live updates |
+| **Long-Polling** | Medium | Higher | Simpler setup, less overhead on server |
+| **Auto** (default) | Lowest to Medium | Varies | Most applications (recommended) |
+
+```javascript
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  transportMode: 'websocket' // or 'long-polling' or 'auto'
+});
+```
+
+### Transport Behavior
+
+- **WebSocket**: Persistent connection for instant flag updates
+- **Long-Polling**: HTTP requests held open by server until flags change
+- **Auto**: Tries WebSocket first, falls back to long-polling if unavailable
+
+## 📖 Framework Integration Examples
+
+### React
+
+```javascript
+import { useEffect, useState } from 'react';
+import { FlagClient } from 'flagmint-js-sdk';
+
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  context: {
+    kind: "multi",
+    user: { kind: "user", key: 'user123', email: 'user@example.com' }
+  }
+});
+
+export function App() {
+  const [flags, setFlags] = useState({});
+
+  useEffect(() => {
+    client.ready().then(() => {
+      setFlags({
+        showBeta: client.getFlag('show_beta', false),
+        theme: client.getFlag('theme', 'light')
+      });
+    });
+
+    // Listen for flag updates
+    const handleFlagsUpdate = () => {
+      setFlags({
+        showBeta: client.getFlag('show_beta', false),
+        theme: client.getFlag('theme', 'light')
+      });
+    };
+
+    client.on('flagsUpdated', handleFlagsUpdate);
+    
+    return () => client.off('flagsUpdated', handleFlagsUpdate);
+  }, []);
+
+  return (
+    <div className={`theme-${flags.theme}`}>
+      {flags.showBeta && <BetaFeature />}
+    </div>
+  );
+}
+```
+
+### Node.js / Express
+
+```javascript
+import { FlagClient } from 'flagmint-js-sdk';
+import * as asyncCache from 'flagmint-js-sdk/core/cacheHelper.async';
+
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  cacheAdapter: {
+    loadFlags: asyncCache.loadCachedFlags,
+    saveFlags: asyncCache.saveCachedFlags,
+    loadContext: asyncCache.loadCachedContext,
+    saveContext: asyncCache.saveCachedContext
+  }
+});
+
+// Wait for initialization
+await client.ready();
+
+app.get('/api/feature', async (req, res) => {
+  const userContext = { 
+    kind: "multi",
+    user: { 
+      kind: "user", 
+      key: req.user.id, 
+      email: req.user.email 
+    },
+    organization: {
+      kind: "organization",
+      key: req.user.orgId,
+      plan: req.user.plan
+    }
+  };
+  
+  const isEnabled = client.getFlag('new_api', false, userContext);
+  
+  res.json({ enabled: isEnabled });
+});
+```
+
+### Vanilla JavaScript
+
+```javascript
+import { FlagClient } from 'flagmint-js-sdk';
+
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  context: {
+    kind: "user",
+    user: { kind: "user", key: 'user123' }
+  }
+});
+
+await client.ready();
+
+// Use flags
+const showNewUI = client.getFlag('new_ui', false);
+if (showNewUI) {
+  document.getElementById('app').classList.add('new-ui');
+}
+```
+
+## 🔄 Context Management
+
+### Updating Context
+
+Update user context at any time to re-evaluate flags:
+
+```javascript
+// Initial context
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  context: { 
+    kind: "user",
+    user: { kind: "user", key: 'user123' }
+  }
+});
+
+// Update context later (e.g., after login)
+client.updateContext({ 
+  kind: "multi",
+  user: {
+    kind: "user",
+    key: 'user123',
+    email: 'user@example.com',
+  },
+  organization: {
+    kind: "organization",
+    key: 'org456',
+    plan: 'premium',
+    country: 'CA'
+  }
+});
+```
+
+### Persisting Context
+
+Enable context persistence across sessions:
+
+```javascript
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  persistContext: true, // Saves to localStorage/AsyncStorage
+  context: { 
+    kind: "user",
+    user: { kind: "user", key: 'user123' }
+  }
+});
+```
+
+## 🔌 Deferred Initialization
+
+For scenarios where you need to set up the client before context is available:
+
+```javascript
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  deferInitialization: true
+});
+
+// Later, when context is ready (e.g., after authentication)
+client.updateContext({ 
+  kind: "user",
+  user: { kind: "user", key: 'user123', email: 'user@example.com' }
+});
+await client.init();
+```
+
+## 🌍 Advanced Usage
+
+### Error Handling
+
+```javascript
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  onError: (error) => {
+    console.error('Flag client error:', error);
+    // Report to monitoring service
+    sentry.captureException(error);
+  }
+});
+```
+
+### Preview Mode
+
+For testing or preview environments where you want to bypass remote flag fetching:
+
+```javascript
+const client = new FlagClient({
+  apiKey: 'ff_...',
+  previewMode: true,
+  rawFlags: {
+    new_checkout: true,
+    discount_percent: 20,
+    ui_variant: 'experimental'
+  }
+});
+
+// All getFlag calls will use rawFlags
+const checkout = client.getFlag('new_checkout', false); // true
+const discount = client.getFlag('discount_percent', 0); // 20
+```
+
+### Event Listeners
+
+Listen to client events:
+
+```javascript
+client.on('flagsUpdated', () => {
+  console.log('Flags have been updated');
+});
+
+client.on('connected', () => {
+  console.log('Transport connected');
+});
+
+client.on('disconnected', () => {
+  console.log('Transport disconnected');
+});
+
+client.on('contextUpdated', (context) => {
+  console.log('Context updated:', context);
+});
+```
+
+## 📋 API Reference
+
+### FlagClient Methods
+
+#### `ready(): Promise<void>`
+Wait for the initial connection and flag synchronization to complete.
+
+```javascript
+await client.ready();
+```
+
+#### `getFlag<T>(key: string, defaultValue: T, context?: Record<string, any>): T`
+Get a flag value with an optional context override.
+
+```javascript
+const theme = client.getFlag('theme', 'light');
+const showFeature = client.getFlag('new_feature', false, { plan: 'premium' });
+```
+
+#### `updateContext(context: Record<string, any>): void`
+Update the evaluation context. This triggers re-evaluation of all flags.
+
+```javascript
+client.updateContext({ 
+  user: { key: 'user456', email: 'newuser@example.com' }
+});
+```
+
+#### `init(): Promise<void>`
+Initialize the client (only needed if `deferInitialization: true`).
+
+```javascript
+await client.init();
+```
+
+#### `disconnect(): void`
+Close the transport connection and cleanup resources.
+
+```javascript
+client.disconnect();
+```
+
+### Events
+
+- **`flagsUpdated`** - Fired when flags change
+- **`contextUpdated`** - Fired when context changes  
+- **`connected`** - Fired when transport connects
+- **`disconnected`** - Fired when transport disconnects
+
+### Cache Adapter Interface
+
+```typescript
+interface CacheAdapter<C = any> {
+  loadFlags(apiKey: string): Promise<Record<string, any>> | Record<string, any>;
+  saveFlags(apiKey: string, flags: Record<string, any>): Promise<void> | void;
+  loadContext(apiKey: string): Promise<C | null> | C | null;
+  saveContext(apiKey: string, context: C): Promise<void> | void;
+}
+```
+
+## ⚙️ Evaluation Helpers
+
+The SDK includes low-level evaluation utilities:
+
+### `evaluateFlagValue(flag, context)`
+
+```javascript
+import { evaluateFlagValue } from 'flagmint-js-sdk/core/evaluation';
+
+const result = evaluateFlagValue(flagConfig, userContext);
+```
+
+Applies targeting rules (segment or attribute rules) and rollouts.
+
+### `evaluateRollout(rollout, context)`
+
+```javascript
+import { evaluateRollout } from 'flagmint-js-sdk/core/evaluation';
+
+const rolloutValue = evaluateRollout(rolloutConfig, userContext);
+```
+
+Supports percentage rollouts with consistent hashing and variant distributions (A/B tests).
+
+### `isInSegment(context, segment)`
+
+```javascript
+import { isInSegment } from 'flagmint-js-sdk/core/evaluation';
+
+const inBetaSegment = isInSegment(userContext, betaSegment);
+```
+
+Evaluates whether a user context matches a segment's criteria.
+
+### `rolloutUtils`
+
+```javascript
+import { rolloutUtils } from 'flagmint-js-sdk/core/evaluation';
+
+const percentage = rolloutUtils.hashToPercentage('user123');
+const variant = rolloutUtils.pickVariant('user123', variantConfig);
+```
+
+Utilities for consistent hashing and variant assignment.
+
+## 🧪 Testing
+
+### SDK Tester Tool
+
+Use the [Flagmint SDK Tester](https://github.com/jtad009/flagmint-sdk-tester) for interactive testing:
+
+```bash
+git clone https://github.com/jtad009/flagmint-sdk-tester.git
+cd flagmint-sdk-tester
+npm install
+npm start
+```
+
+Features:
+- 🔄 Dual transport testing (WebSocket + HTTP)
+- 🎯 Visual context builder
+- 📊 Protocol logging and debugging
+- 🧪 Rollout simulation
+- 📈 Performance monitoring
+
+## 🐛 Troubleshooting
+
+### Client not connecting
+
+- Verify your API key is correct
+- Check network connectivity
+- Review browser console for errors
+- Ensure CORS is properly configured if using from browser
+
+### Flags not updating
+
+- Confirm `enableOfflineCache: false` or cache is working correctly
+- Check transport mode (WebSocket vs long-polling)
+- Verify context is properly set with `updateContext()`
+- Listen to `flagsUpdated` event to detect changes
+
+### Performance issues
+
+- Consider using long-polling instead of WebSocket for high-traffic scenarios
+- Implement proper cache TTLs with custom cache adapter
+- Monitor transport connection status
+- Use Redis caching for server-side applications
+
+### TypeScript errors
+
+- Ensure you're using the latest version of the SDK
+- Check that your `tsconfig.json` includes proper module resolution
+- Use explicit type parameters: `client.getFlag<boolean>('flag', false)`
+
+## 📞 Support & Resources
+
+<CardGroup cols={2}>
+  <Card title="Documentation" icon="book" href="https://docs.flagmint.io">
+    Full platform documentation
+  </Card>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/flagmint/js-sdk/issues">
+    Report bugs and issues
+  </Card>
+  <Card title="Email Support" icon="envelope" href="mailto:support@flagmint.io">
+    Contact our support team
+  </Card>
+  <Card title="SDK Tester" icon="flask" href="https://github.com/jtad009/flagmint-sdk-tester">
+    Interactive testing tool
+  </Card>
+</CardGroup>
+
+## 🚀 Changelog
+
+### v1.2.20 (Latest)
+
+- Enhanced async cache helper for better server-side support
+- Improved WebSocket connection stability
+- Better error reporting and handling
+- Added support for context persistence
+- Performance optimizations for large flag sets
+
+<Tip>
+  See the full changelog on [npm](https://www.npmjs.com/package/flagmint-js-sdk?activeTab=versions) or [GitHub](https://github.com/flagmint/js-sdk/releases)
+</Tip>
+
+## 📄 License
+
+MIT © Flagmint Team

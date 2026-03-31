@@ -1,8 +1,648 @@
 ---
-title: "Vuejs"
-description: "Coming soon."
+title: "Vue.js SDK"
+description: "Feature flag SDK for Vue 2 and Vue 3 applications with real-time updates"
 ---
 
+# Flagmint Vue.js SDK
+
+A lightweight and powerful feature flag SDK for Vue 2 and Vue 3 applications with real-time updates via WebSocket.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Vue 2 & 3 Support" icon="vuejs">
+    Works seamlessly with both Vue 2 and Vue 3
+  </Card>
+  <Card title="Real-time Updates" icon="bolt">
+    WebSocket and HTTP long-polling support
+  </Card>
+  <Card title="Segment Targeting" icon="bullseye">
+    Advanced targeting rules and rollout strategies
+  </Card>
+  <Card title="Offline Ready" icon="wifi-slash">
+    Built-in caching and preview mode
+  </Card>
+</CardGroup>
+
+## Installation
+
+<CodeGroup>
+
+```bash npm
+npm install flagmint-vuejs-feature-flags
+```
+
+```bash yarn
+yarn add flagmint-vuejs-feature-flags
+```
+
+```bash pnpm
+pnpm add flagmint-vuejs-feature-flags
+```
+
+</CodeGroup>
+
 <Note>
-  This page is under construction. Check back soon or [contact us](mailto:support@flagmint.com) if you need this information now.
+  TypeScript support is built-in with full type declarations included.
 </Note>
+
+## Quick Start
+
+### Vue 3 Setup
+
+```typescript
+// main.ts
+import { createApp } from 'vue';
+import App from './App.vue';
+import { createFlagmintPlugin } from 'flagmint-vuejs-feature-flags';
+
+const app = createApp(App);
+
+app.use(createFlagmintPlugin({
+  apiKey: 'your-api-key',
+  context: { user_id: 'abc123', country: 'US' },
+  transportMode: 'auto',
+  autoRefresh: true,
+  previewMode: false
+}));
+
+app.mount('#app');
+```
+
+### Vue 2 Setup
+
+```javascript
+// main.js
+import Vue from 'vue';
+import { createFlagmintPlugin } from 'flagmint-vuejs-feature-flags';
+
+Vue.use(createFlagmintPlugin({
+  apiKey: 'your-api-key',
+  context: { user_id: 'abc123', country: 'NG' },
+  transportMode: 'auto',
+  autoRefresh: true,
+  previewMode: false
+}));
+
+new Vue({ render: h => h(App) }).$mount('#app');
+```
+
+## Configuration Options
+
+The `createFlagmintPlugin` accepts a `FlagClientOptions` object:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `apiKey` | `string` | *required* | Your Flagmint API key |
+| `context` | `Record<string, any>` | `{}` | User attributes for targeting (e.g., user_id, email, country) |
+| `autoRefresh` | `boolean` | `true` | Automatically refresh flags when context changes |
+| `refreshIntervalMs` | `number` | `30000` | Polling interval for HTTP mode (milliseconds) |
+| `persistContext` | `boolean` | `false` | Store context in localStorage |
+| `enableOfflineCache` | `boolean` | `true` | Enable offline flag caching |
+| `cacheTTL` | `number` | `3600000` | Cache time-to-live (1 hour default) |
+| `transportMode` | `'auto' \| 'websocket' \| 'long-polling'` | `'auto'` | Connection mode (auto tries WebSocket first) |
+| `previewMode` | `boolean` | `false` | Local-only mode (no network calls) |
+| `onError` | `(err: Error) => void` | `undefined` | Error callback handler |
+
+<Tip>
+  Use `transportMode: 'auto'` for the best experience - it automatically uses WebSocket with fallback to long-polling.
+</Tip>
+
+## Using Flags
+
+### Vue 3 - Composition API (Recommended)
+
+```vue
+<template>
+  <div>
+    <div v-if="flags['dark-mode']">
+      Dark mode is enabled! 🌙
+    </div>
+    <div v-if="flags['new-feature']">
+      Check out our new feature!
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { useFlagClient, useFlagmintReady } from 'flagmint-vuejs-feature-flags';
+
+// Wait for flags to load
+await useFlagmintReady();
+
+// Get reactive flag client
+const flagClient = useFlagClient();
+const flags = flagClient.getReactiveFlags();
+
+// Or get individual flags
+const darkMode = flagClient.getFlag('dark-mode', false);
+</script>
+```
+
+### Vue 3 - Options API
+
+```vue
+<template>
+  <div>
+    <div v-if="isDarkMode">Dark mode enabled</div>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      isDarkMode: false
+    };
+  },
+  async mounted() {
+    await this.$flagmintReady;
+    this.isDarkMode = this.$flagmint.getFlag('dark-mode', false);
+  }
+}
+</script>
+```
+
+### Vue 2 - Using Mixin
+
+```vue
+<template>
+  <div>
+    <div v-if="featureFlags['dark-mode']">
+      Dark mode is on!
+    </div>
+  </div>
+</template>
+
+<script>
+import { useFlagsMixin } from 'flagmint-vuejs-feature-flags/vue2/useFlags';
+
+export default {
+  mixins: [useFlagsMixin],
+  mounted() {
+    console.log(this.featureFlags['dark-mode']);
+    console.log(this.getFlag('dark-mode', false));
+  }
+}
+</script>
+```
+
+### Vue 2 - Options API
+
+```vue
+<script>
+export default {
+  async mounted() {
+    await this.$flagmintReady;
+    const enabled = this.$flagmint.getFlag('dark-mode', false);
+  }
+}
+</script>
+```
+
+## Feature Component
+
+Use the built-in `<Feature>` component for declarative flag checking:
+
+```vue
+<template>
+  <div>
+    <Feature flag="dark-mode">
+      <div class="dark-theme">Dark mode is enabled! 🌙</div>
+    </Feature>
+    
+    <Feature flag="beta-features">
+      <div class="beta-badge">Beta Features Available</div>
+    </Feature>
+  </div>
+</template>
+
+<script>
+import { Feature } from 'flagmint-vuejs-feature-flags/vue3/components';
+// For Vue 2: import { Feature } from 'flagmint-vuejs-feature-flags/vue2/components';
+
+export default {
+  components: { Feature }
+};
+</script>
+```
+
+## Reactive Flags
+
+Get all flags as a reactive object that automatically updates:
+
+```javascript
+// ✅ Recommended (Reactive)
+const flags = this.$flagmint.getReactiveFlags();
+console.log(flags['dark-mode']); // updates reactively when flag changes
+
+// ⚠️ Non-reactive (useful for quick access)
+const enabled = this.$flagmint.getFlag('dark-mode', false);
+```
+
+## Updating Context
+
+Update user context dynamically (triggers flag re-evaluation):
+
+```javascript
+// Update context
+this.$flagmint.updateContext({ 
+  user_id: 'user123',
+  plan: 'premium',
+  country: 'US'
+});
+
+// Or merge with existing context
+this.$flagmint.updateContext({ plan: 'enterprise' });
+```
+
+<Tip>
+  When `autoRefresh: true`, updating context automatically re-evaluates all flags with the new attributes.
+</Tip>
+
+## Preview Mode (Local Testing)
+
+Enable preview mode for local development without API calls:
+
+```javascript
+createFlagmintPlugin({
+  previewMode: true,
+  context: { user_id: 'test-user' }
+});
+
+// Then load flags directly
+flagClient.setFlags([
+  {
+    key: 'dark-mode',
+    type: 'boolean',
+    value: true,
+    targeting_rules: []
+  }
+], {});
+```
+
+<Warning>
+  Preview mode shows a console warning in development. This mode is ideal for:
+  - SDK testing
+  - Storybook development
+  - Static environments
+</Warning>
+
+## Targeting Rules & Rollouts
+
+Flags support sophisticated targeting with rules and segments:
+
+```javascript
+{
+  key: 'new-ui',
+  type: 'boolean',
+  value: true,
+  targeting_rules: [
+    // Direct attribute rule
+    { type: 'rule', attribute: 'country', operator: 'eq', value: 'NG' },
+    // Segment reference
+    { type: 'segment', segment_id: 'premium-users' }
+  ],
+  rollout: {
+    strategy: 'percentage',
+    percentage: 50,
+    salt: 'xyz'
+  },
+  segmentsById: {
+    'premium-users': {
+      id: 'premium-users',
+      rules: [{ attribute: 'plan', operator: 'eq', value: 'pro', type: 'rule' }]
+    }
+  }
+}
+```
+
+### Supported Operators
+
+| Operator | Description |
+|----------|-------------|
+| `eq` | Equal to |
+| `neq` | Not equal to |
+| `in` | In array |
+| `nin` | Not in array |
+| `gt` | Greater than |
+| `lt` | Less than |
+| `exists` | Attribute exists |
+| `not_exists` | Attribute doesn't exist |
+
+### Rollout Strategies
+
+**Percentage Rollout**
+```javascript
+{
+  strategy: 'percentage',
+  percentage: 50,  // 50% of users get the feature
+  salt: 'unique-salt'
+}
+```
+
+**Variant Rollout**
+```javascript
+{
+  strategy: 'variant',
+  variants: [
+    { id: 'control', weight: 40 },
+    { id: 'variant-a', weight: 30 },
+    { id: 'variant-b', weight: 30 }
+  ]
+}
+```
+
+## Real-time Updates
+
+With WebSocket transport, flags update automatically when changed in Flagmint:
+
+```javascript
+createFlagmintPlugin({
+  transportMode: 'auto', // or 'websocket'
+  apiKey: 'your-api-key',
+  context: { user_id: 'abc123' }
+});
+
+// Flags will update in real-time without page refresh
+```
+
+<Info>
+  **Transport Modes:**
+  - `auto` - Tries WebSocket, falls back to long-polling
+  - `websocket` - WebSocket only (fails if unavailable)
+  - `long-polling` - HTTP polling only
+</Info>
+
+## Testing Your Integration
+
+Use the **Flagmint SDK Tester** to verify your implementation:
+
+```bash
+npx flagmint-sdk-tester
+```
+
+The SDK Tester provides:
+- ✅ Both WebSocket and REST transport testing
+- ✅ Visual context builder
+- ✅ Protocol event logging
+- ✅ Flag evaluation verification
+- ✅ Network debugging
+
+<Card title="SDK Testing Tool" icon="flask" href="https://github.com/jtad009/flagmint-sdk-tester">
+  Test your Vue.js integration with our interactive testing tool
+</Card>
+
+## Advanced Usage
+
+### Manually Control Initialization
+
+```vue
+<script setup>
+import { useFlagClient, useFlagmintReady } from 'flagmint-vuejs-feature-flags';
+
+// Wait for initialization
+const ready = await useFlagmintReady();
+
+const client = useFlagClient();
+const flags = client.getReactiveFlags();
+</script>
+```
+
+### Error Handling
+
+```javascript
+createFlagmintPlugin({
+  apiKey: 'your-api-key',
+  onError: (error) => {
+    console.error('Flagmint error:', error);
+    // Log to your error tracking service
+  }
+});
+```
+
+### Inject Pattern (Vue 3)
+
+```javascript
+import { inject } from 'vue';
+
+export default {
+  setup() {
+    const client = inject('__flagmint__');
+    const feature = client?.getFlag('chat-enabled', false);
+    return { feature };
+  }
+}
+```
+
+## API Reference
+
+### Plugin Methods
+
+#### `getFlag(key: string, defaultValue?: any): any`
+Get a flag value (non-reactive).
+
+```javascript
+const enabled = this.$flagmint.getFlag('dark-mode', false);
+```
+
+#### `getReactiveFlags(): Record<string, any>`
+Get all flags as a reactive object.
+
+```javascript
+const flags = this.$flagmint.getReactiveFlags();
+// flags updates automatically when flags change
+```
+
+#### `updateContext(context: Record<string, any>): void`
+Update user context and re-evaluate flags.
+
+```javascript
+this.$flagmint.updateContext({ user_id: 'user123', plan: 'pro' });
+```
+
+#### `setFlags(flags: Flag[], segmentsById: Record<string, Segment>): void`
+Manually set flags (useful in preview mode).
+
+```javascript
+this.$flagmint.setFlags([flag1, flag2], segmentsById);
+```
+
+#### `$flagmintReady: Promise<void>`
+Promise that resolves when flags are initialized.
+
+```javascript
+await this.$flagmintReady;
+// Flags are now loaded
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Reactive Flags" icon="chart-line">
+    For better performance and automatic updates, use `getReactiveFlags()` instead of `getFlag()` in templates.
+    
+    ```vue
+    <script setup>
+    const flags = useFlagClient().getReactiveFlags();
+    </script>
+    
+    <template>
+      <div v-if="flags['new-feature']">Feature content</div>
+    </template>
+    ```
+  </Accordion>
+
+  <Accordion title="Await Initialization" icon="clock">
+    Always wait for `$flagmintReady` or `useFlagmintReady()` before accessing flags to avoid race conditions.
+    
+    ```javascript
+    await this.$flagmintReady;
+    const value = this.$flagmint.getFlag('my-flag', false);
+    ```
+  </Accordion>
+
+  <Accordion title="Provide Default Values" icon="shield">
+    Always provide sensible defaults when calling `getFlag()` to handle loading states gracefully.
+    
+    ```javascript
+    const theme = this.$flagmint.getFlag('theme', 'light'); // 'light' as default
+    ```
+  </Accordion>
+
+  <Accordion title="Use Auto Transport" icon="arrows-rotate">
+    Set `transportMode: 'auto'` to get WebSocket with automatic fallback to long-polling if WebSocket fails.
+  </Accordion>
+</AccordionGroup>
+
+## Example: Feature Toggle
+
+```vue
+<template>
+  <div class="app">
+    <Feature flag="dark-mode">
+      <div class="dark-theme">
+        <h1>Dark Mode Enabled 🌙</h1>
+      </div>
+    </Feature>
+    
+    <Feature flag="beta-features">
+      <button @click="enableBeta">
+        Try Beta Features
+      </button>
+    </Feature>
+    
+    <div v-if="flags['new-checkout']">
+      <NewCheckoutFlow />
+    </div>
+    <div v-else>
+      <LegacyCheckoutFlow />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { useFlagClient, useFlagmintReady } from 'flagmint-vuejs-feature-flags';
+import { Feature } from 'flagmint-vuejs-feature-flags/vue3/components';
+
+await useFlagmintReady();
+
+const client = useFlagClient();
+const flags = client.getReactiveFlags();
+
+const enableBeta = () => {
+  client.updateContext({ beta_tester: true });
+};
+</script>
+```
+
+## Example: A/B Testing
+
+```vue
+<template>
+  <div>
+    <div v-if="variant === 'control'">
+      <OriginalFeature />
+    </div>
+    <div v-else-if="variant === 'variant-a'">
+      <FeatureVariantA />
+    </div>
+    <div v-else-if="variant === 'variant-b'">
+      <FeatureVariantB />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { useFlagClient, useFlagmintReady } from 'flagmint-vuejs-feature-flags';
+
+await useFlagmintReady();
+
+const client = useFlagClient();
+const variant = client.getFlag('experiment-design', 'control');
+</script>
+```
+
+## Roadmap
+
+- [x] Segment evaluation
+- [x] Rollout strategies (percentage & variant)
+- [x] Preview/local-only mode
+- [x] Composables and mixins
+- [x] WebSocket + long-polling fallback
+- [x] Feature component
+- [ ] SSR / Nuxt support
+- [ ] Variant analytics
+- [ ] Remote override via devtools
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Flags not loading" icon="triangle-exclamation">
+    **Symptoms:** Flags return default values
+    
+    **Solutions:**
+    - Verify your API key is correct
+    - Check that you're awaiting `$flagmintReady` or `useFlagmintReady()`
+    - Ensure your network allows WebSocket connections to api.flagmint.com
+    - Check browser console for errors
+  </Accordion>
+
+  <Accordion title="Flags not updating in real-time" icon="arrows-rotate">
+    **Symptoms:** Changes in Flagmint dashboard don't reflect in app
+    
+    **Solutions:**
+    - Confirm `transportMode` is set to `'auto'` or `'websocket'`
+    - Check WebSocket connection in browser DevTools (Network tab)
+    - Verify `autoRefresh: true` is set
+    - Ensure you're using `getReactiveFlags()` not cached `getFlag()` calls
+  </Accordion>
+
+  <Accordion title="TypeScript errors" icon="code">
+    **Symptoms:** Type errors with flag methods
+    
+    **Solutions:**
+    - Ensure you're using TypeScript 4.5+
+    - Import types explicitly if needed:
+      ```typescript
+      import type { FlagClientOptions } from 'flagmint-vuejs-feature-flags';
+      ```
+  </Accordion>
+</AccordionGroup>
+
+## Support
+
+<CardGroup cols={2}>
+  <Card title="npm Package" icon="npm" href="https://www.npmjs.com/package/flagmint-vuejs-feature-flags">
+    View on npm registry
+  </Card>
+  <Card title="SDK Tester" icon="flask" href="https://github.com/jtad009/flagmint-sdk-tester">
+    Test your integration
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference/introduction">
+    Full API documentation
+  </Card>
+  <Card title="Contact Support" icon="envelope" href="mailto:support@flagmint.com">
+    Get help from our team
+  </Card>
+</CardGroup>

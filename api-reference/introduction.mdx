@@ -1,33 +1,48 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: 'API Reference'
+description: 'Complete API documentation for Flagmint feature flag management'
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+## Welcome to Flagmint API
 
-## Welcome
+The Flagmint API provides comprehensive programmatic access to manage feature flags, targeting rules, segments, and user evaluations. Whether you're integrating flags into your application or building custom workflows, our REST API gives you full control.
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
+<CardGroup cols={2}>
+  <Card title="Quick Evaluation" icon="bolt" href="/api-reference/evaluate">
+    Evaluate feature flags for your users
+  </Card>
+  <Card title="Flag Management" icon="flag" href="/api-reference/flags/get-projects-flags">
+    Create and manage feature flags
+  </Card>
+  <Card title="Targeting Rules" icon="bullseye" href="/api-reference/flag-targeting-rules/get-projects-flags-targeting-rules">
+    Define sophisticated user targeting
+  </Card>
+  <Card title="Segments" icon="users" href="/api-reference/segments/get-projects-segments">
+    Organize users into segments
+  </Card>
+</CardGroup>
 
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+## Base URL
+
+All API requests are made to:
+
+```
+https://api.flagmint.com/api/v1
+```
 
 ## Authentication
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+Flagmint API uses two authentication methods:
 
-```json
-"security": [
-  {
-    "bearerAuth": []
-  }
-]
+1. **API Keys** - For server-side flag evaluation and management
+2. **Bearer Tokens** - For user authentication and organization management
+
+Include your API key in the request header:
+
+```bash
+Authorization: Bearer YOUR_API_KEY
 ```
+
+<Tip>
+  You can generate API keys in your project settings. Each key is scoped to a specific project and environment.
+</Tip>
