@@ -1,0 +1,218 @@
+---
+title: "Quick Start"
+description: "Get your first feature flag running in 5 minutes."
+---
+
+This guide takes you from zero to a working feature flag in your React app. By the end, you'll be toggling features from the Flagmint dashboard in real-time.
+
+<Info>
+  Using Vue.js or Node.js? The steps are the same — just swap the SDK. See [Vue SDK](/sdks/vuejs) or [Node.js SDK](/sdks/nodejs) for framework-specific setup.
+</Info>
+
+## Prerequisites
+
+- A Flagmint account ([sign up free](https://flagmint.com/onboarding/create))
+- A React application (Next.js, Vite, or Create React App)
+
+## 1. Get Your SDK Key
+
+<Steps>
+  <Step title="Create a project">
+    After signing in, create your first project (e.g., "Web App"). A project groups your flags together.
+  </Step>
+  <Step title="Find your SDK key">
+    Go to **Settings → Environments**. Each environment (Development, Staging, Production) has its own SDK key. Copy the **Development** key — it starts with `ff_`.
+  </Step>
+</Steps>
+
+<Warning>
+  Never use your Production SDK key during development. Each environment has separate flag values and keys.
+</Warning>
+
+## 2. Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install flagmint-react-sdk
+```
+
+```bash yarn
+yarn add flagmint-react-sdk
+```
+
+```bash pnpm
+pnpm add flagmint-react-sdk
+```
+
+</CodeGroup>
+
+## 3. Wrap Your App with the Provider
+
+Add `FlagmintProvider` to your app's root layout. This creates a single connection to Flagmint that all your components share.
+
+<CodeGroup>
+
+```tsx Next.js (App Router)
+// app/providers.tsx
+'use client';
+import { FlagmintProvider } from 'flagmint-react-sdk/client';
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <FlagmintProvider
+      options={{
+        apiKey: process.env.NEXT_PUBLIC_FLAGMINT_KEY!,
+        transportMode: 'websocket',
+      }}
+    >
+      {children}
+    </FlagmintProvider>
+  );
+}
+
+// app/layout.tsx
+import { Providers } from './providers';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+```tsx Vite / CRA
+// main.tsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { FlagmintProvider } from 'flagmint-react-sdk/client';
+import App from './App';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <FlagmintProvider
+      options={{
+        apiKey: import.meta.env.VITE_FLAGMINT_KEY,
+        transportMode: 'websocket',
+      }}
+    >
+      <App />
+    </FlagmintProvider>
+  </React.StrictMode>
+);
+```
+
+</CodeGroup>
+
+<Tip>
+  Place `FlagmintProvider` as high as possible in your component tree — ideally in the root layout. This avoids reconnecting the WebSocket on every route change.
+</Tip>
+
+## 4. Create a Flag in the Dashboard
+
+1. Go to your project in the Flagmint dashboard
+2. Click **Create Flag**
+3. Set the key to `new-feature`
+4. Set the type to **Boolean**
+5. Set the default variation to `false`
+6. Click **Create**
+
+Your flag now exists but is turned off by default.
+
+## 5. Use the Flag in Your Code
+
+```tsx
+// components/MyFeature.tsx
+'use client';
+import { useFlag, useFlagmintReady } from 'flagmint-react-sdk/client';
+
+export function MyFeature() {
+  const isReady = useFlagmintReady();
+  const showNewFeature = useFlag<boolean>('new-feature', false);
+
+  if (!isReady) {
+    return <div>Loading...</div>;
+  }
+
+  if (showNewFeature) {
+    return <div>Welcome to the new feature!</div>;
+  }
+
+  return <div>Original experience</div>;
+}
+```
+
+The `useFlag` hook takes two arguments:
+- **`'new-feature'`** — the flag key, matching what you created in the dashboard
+- **`false`** — the fallback value used if the SDK can't reach the server
+
+## 6. Toggle It Live
+
+1. Go back to the Flagmint dashboard
+2. Find your `new-feature` flag
+3. Toggle it to **active** and set the default variation to `true`
+4. Watch your app update in real-time — no page refresh needed
+
+That's it. You're now controlling features from the dashboard.
+
+## 7. Add User Context (Optional)
+
+To target specific users, pass context when the user logs in:
+
+```tsx
+// app/FlagmintWithAuth.tsx
+'use client';
+import { FlagmintProvider } from 'flagmint-react-sdk/client';
+import { useUser } from '@/hooks/useUser';
+
+export function FlagmintWithAuth({ children }: { children: React.ReactNode }) {
+  const { user } = useUser();
+
+  return (
+    <FlagmintProvider
+      options={{
+        apiKey: process.env.NEXT_PUBLIC_FLAGMINT_KEY!,
+        transportMode: 'websocket',
+        context: user ? {
+          kind: 'multi',
+          user: {
+            kind: 'user',
+            key: user.id,
+            email: user.email,
+            plan: user.plan,
+          },
+          organization: {
+            kind: 'organization',
+            key: user.orgId,
+          },
+        } : undefined,
+      }}
+    >
+      {children}
+    </FlagmintProvider>
+  );
+}
+```
+
+Now you can create targeting rules in the dashboard like "show this feature only to users on the Pro plan" or "roll out to 25% of users."
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Core Concepts" icon="book" href="/getting-started/concepts">
+    Understand flags, variations, targeting rules, segments, and rollouts.
+  </Card>
+  <Card title="Your First Flag (Tutorial)" icon="flag" href="/getting-started/your-first-flag">
+    A deeper walkthrough: create a flag with targeting rules and a gradual rollout.
+  </Card>
+  <Card title="React SDK Reference" icon="react" href="/sdks/react">
+    Full SDK documentation including hooks, TypeScript, caching, and Next.js patterns.
+  </Card>
+  <Card title="Plans & Pricing" icon="credit-card" href="/billing/plans">
+    Free forever on the starter plan. See what's included on each tier.
+  </Card>
+</CardGroup>

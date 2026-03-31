@@ -1,0 +1,277 @@
+---
+title: "React SDK"
+description: "Integrate Flagmint feature flags into your React application."
+---
+
+The Flagmint React SDK provides hooks for evaluating feature flags in React and Next.js applications. Flags update in real-time via WebSocket.
+
+## Installation
+
+<CodeGroup>
+
+```bash npm
+npm install flagmint-react-sdk
+```
+
+```bash yarn
+yarn add flagmint-react-sdk
+```
+
+```bash pnpm
+pnpm add flagmint-react-sdk
+```
+
+</CodeGroup>
+
+## Setup
+
+### Add the Provider
+
+`FlagmintProvider` initialises the SDK and provides flag context to all child components. Place it as high as possible in your component tree.
+
+<CodeGroup>
+
+```tsx Next.js (App Router)
+// app/providers.tsx
+'use client';
+import { FlagmintProvider } from 'flagmint-react-sdk/client';
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <FlagmintProvider
+      options={{
+        apiKey: process.env.NEXT_PUBLIC_FLAGMINT_KEY!,
+        transportMode: 'websocket',
+      }}
+    >
+      {children}
+    </FlagmintProvider>
+  );
+}
+```
+
+```tsx Vite
+// main.tsx
+import { FlagmintProvider } from 'flagmint-react-sdk/client';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <FlagmintProvider
+    options={{
+      apiKey: import.meta.env.VITE_FLAGMINT_KEY,
+      transportMode: 'websocket',
+    }}
+  >
+    <App />
+  </FlagmintProvider>
+);
+```
+
+</CodeGroup>
+
+<Warning>
+  Do not place `FlagmintProvider` inside a nested layout or page component. Doing so creates a new WebSocket connection on every route navigation.
+</Warning>
+
+### Provider Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `options` | `FlagClientOptions` | Required | SDK configuration (see below) |
+| `initialFlags` | `Record<string, any>` | `{}` | Pre-evaluated flags for SSR hydration |
+| `deferInitialization` | `boolean` | `false` | If true, don't connect until context is set |
+
+### FlagClientOptions
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `apiKey` | `string` | Required | Your environment's SDK key (starts with `ff_`) |
+| `context` | `object` | `undefined` | Evaluation context (user, org attributes) |
+| `transportMode` | `'auto' \| 'websocket' \| 'long-polling'` | `'auto'` | Connection method |
+| `enableOfflineCache` | `boolean` | `true` | Cache flags in localStorage for offline use |
+| `persistContext` | `boolean` | `false` | Persist context across page reloads |
+| `onError` | `(error: Error) => void` | `undefined` | Error handler callback |
+
+## Evaluating Flags
+
+### useFlag
+
+Returns the evaluated value of a single flag. Re-renders the component when the flag value changes.
+
+```tsx
+import { useFlag } from 'flagmint-react-sdk/client';
+
+// Boolean flag
+const showFeature = useFlag<boolean>('new-feature', false);
+
+// String flag
+const buttonColor = useFlag<string>('button-color', 'blue');
+
+// Number flag
+const maxItems = useFlag<number>('max-items', 10);
+
+// JSON flag
+const config = useFlag<{ retries: number }>('api-config', { retries: 3 });
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `key` | `string` | The flag key (must match the key in the dashboard) |
+| `defaultValue` | `T` | Fallback value used when the SDK isn't ready or the flag doesn't exist |
+
+### useFlagmintReady
+
+Returns `true` once the SDK has connected and received its initial flag values.
+
+```tsx
+import { useFlag, useFlagmintReady } from 'flagmint-react-sdk/client';
+
+export function Feature() {
+  const isReady = useFlagmintReady();
+  const showFeature = useFlag<boolean>('new-feature', false);
+
+  if (!isReady) return <LoadingSpinner />;
+  if (!showFeature) return null;
+
+  return <NewFeature />;
+}
+```
+
+<Tip>
+  Use `useFlagmintReady` to prevent a flash of default content before flags load. For pages that work fine without flags (login, signup), skip the ready check and let children render immediately.
+</Tip>
+
+## User Context
+
+### Setting Context at Init
+
+Pass context when the user is known (typically after login):
+
+```tsx
+<FlagmintProvider
+  options={{
+    apiKey: process.env.NEXT_PUBLIC_FLAGMINT_KEY!,
+    context: {
+      kind: 'multi',
+      user: {
+        kind: 'user',
+        key: user.id,
+        email: user.email,
+        country: user.country,
+      },
+      organization: {
+        kind: 'organization',
+        key: user.orgId,
+        plan: user.plan,
+      },
+    },
+  }}
+>
+```
+
+### Authentication Pattern
+
+The recommended pattern for apps with login is to always render children, but only pass context after authentication:
+
+```tsx
+'use client';
+import { FlagmintProvider } from 'flagmint-react-sdk/client';
+import { useUser } from '@/hooks/useUser';
+
+export function FlagmintWithAuth({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useUser();
+
+  const apiKey = process.env.NEXT_PUBLIC_FLAGMINT_KEY;
+  if (!apiKey) return <>{children}</>;
+
+  // Not logged in yet — render without flags
+  if (!user || isLoading) return <>{children}</>;
+
+  return (
+    <FlagmintProvider
+      options={{
+        apiKey,
+        transportMode: 'websocket',
+        context: {
+          kind: 'multi',
+          user: { kind: 'user', key: user.id, email: user.email },
+          organization: { kind: 'organization', key: user.orgId, plan: user.plan },
+        },
+      }}
+    >
+      {children}
+    </FlagmintProvider>
+  );
+}
+```
+
+This ensures public pages (login, signup, marketing) render immediately without waiting for the SDK.
+
+## Transport Modes
+
+| Mode | Best For | Real-Time? |
+|------|----------|-----------|
+| `websocket` | Browser apps, dashboards | Yes — server pushes updates instantly |
+| `long-polling` | Server-side rendering, restricted networks | No — polls every 10 seconds |
+| `auto` | Most apps (default) | Tries WebSocket, falls back to polling |
+
+For client-side React apps, `websocket` is recommended. The SDK maintains a single persistent connection and receives flag updates the moment they change in the dashboard.
+
+## Offline & Caching
+
+When `enableOfflineCache` is `true` (the default), the SDK caches flag values in `localStorage`. If the server is unreachable on the next page load, the SDK serves cached values until a connection is re-established.
+
+Cached values expire after 24 hours.
+
+## TypeScript
+
+The SDK is fully typed. Use generics with `useFlag` to get type-safe flag values:
+
+```tsx
+interface FeatureConfig {
+  maxRetries: number;
+  timeout: number;
+  enableLogging: boolean;
+}
+
+const config = useFlag<FeatureConfig>('api-config', {
+  maxRetries: 3,
+  timeout: 5000,
+  enableLogging: false,
+});
+
+// config is typed as FeatureConfig
+console.log(config.maxRetries); // ✓ type-safe
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="useFlagmintReady always returns false">
+    The SDK can't connect to the server. Check that your API key is correct, the API URL is reachable, and CORS allows your app's origin.
+  </Accordion>
+  <Accordion title="Flags don't update in real-time">
+    Verify you're using `transportMode: 'websocket'`. If you're behind a corporate proxy that blocks WebSocket connections, switch to `'long-polling'`.
+  </Accordion>
+  <Accordion title="Hydration mismatch in Next.js">
+    The server doesn't have flag values during SSR. Use the `initialFlags` prop to pass pre-evaluated flags, or wrap the flag-dependent UI with `useFlagmintReady` to defer rendering until the client has connected.
+  </Accordion>
+  <Accordion title="WebSocket disconnects and reconnects repeatedly">
+    Check your server's heartbeat interval. The SDK sends a ping every 25 seconds. If your server's heartbeat timeout is shorter than the SDK's ping interval, the server will terminate the connection. Align both to 30 seconds.
+  </Accordion>
+  <Accordion title="CORS error when connecting">
+    Your Flagmint API must include your app's origin in its CORS configuration. For local development, ensure `localhost:3000` (or your dev port) is allowed. The WebSocket upgrade request also needs CORS headers.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Targeting Rules" icon="crosshairs" href="/platform/targeting-rules">
+    Control which users see which features.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/evaluate">
+    Direct API access for custom integrations.
+  </Card>
+</CardGroup>

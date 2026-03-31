@@ -1,122 +1,321 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Flagmint Docs",
+  "openapi": "/api-reference/openapi.json",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#4C1D95",
+    "light": "#7C3AED",
+    "dark": "#4C1D95"
   },
   "favicon": "/favicon.svg",
-  "navigation": {
-    "tabs": [
-      {
-        "tab": "Guides",
-        "groups": [
-          {
-            "group": "Getting started",
-            "pages": [
-              "index",
-              "quickstart",
-              "development"
-            ]
-          },
-          {
-            "group": "Customization",
-            "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API reference",
-        "groups": [
-          {
-            "group": "API documentation",
-            "pages": [
-              "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Endpoint examples",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
-            ]
-          }
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
   },
   "navbar": {
     "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
+      { "label": "Dashboard", "href": "https://flagmint.com/dashboard" },
+      { "label": "Support", "href": "mailto:support@flagmint.com" }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "Get Started Free",
+      "href": "https://flagmint.com/onboarding/create"
     }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/jtad009/Flagmint-ui",
+      "linkedin": "https://linkedin.com/company/flagmint"
     }
-  }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "getting-started/introduction",
+              "getting-started/quickstart",
+              "getting-started/concepts",
+              "getting-started/your-first-flag"
+            ]
+          },
+          {
+            "group": "Platform",
+            "pages": [
+              "platform/flags",
+              "platform/targeting-rules",
+              "platform/segments",
+              "platform/rollouts",
+              "platform/environments",
+              "platform/projects",
+              "platform/organisations"
+            ]
+          },
+          {
+            "group": "Billing & Plans",
+            "pages": [
+              "billing/plans",
+              "billing/usage",
+              "billing/subscriptions"
+            ]
+          },
+          {
+            "group": "Security & Compliance",
+            "pages": [
+              "security/gdpr",
+              "security/data-residency",
+              "security/dpa",
+              "security/practices"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "resources/migrate-from-launchdarkly",
+              "resources/best-practices",
+              "resources/troubleshooting",
+              "resources/changelog"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SDKs",
+        "groups": [
+          {
+            "group": "Client-Side SDKs",
+            "pages": ["sdks/react", "sdks/vuejs"]
+          },
+          {
+            "group": "Server-Side SDKs",
+            "pages": ["sdks/nodejs"]
+          },
+          {
+            "group": "Direct Integration",
+            "pages": ["sdks/rest-api"]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/authentication",
+              "api-reference/errors"
+            ]
+          },
+          {
+            "group": "Evaluation",
+            "pages": [
+              "api-reference/evaluate",
+              "api-reference/evaluation/evaluate-feature-flags-using-an-api-key"
+            ]
+          },
+          {
+            "group": "Authentication & Users",
+            "pages": [
+              "api-reference/users/login-a-user",
+              "api-reference/users/authenticate-with-google",
+              "api-reference/users/refresh-an-auth-token",
+              "api-reference/users/get-user-profile",
+              "api-reference/users/update-user-profile-authenticated",
+              "api-reference/users/change-password-authenticated",
+              "api-reference/users/request-password-reset",
+              "api-reference/users/reset-password-unauthenticated",
+              "api-reference/users/invite-a-new-user-to-the-organization",
+              "api-reference/users/verify-invitation-token",
+              "api-reference/users/accept-invitation-and-set-password",
+              "api-reference/users/upload-avatar-directly",
+              "api-reference/users/upload-chunk-tus-protocol",
+              "api-reference/users/finalize-tus-upload",
+              "api-reference/users/cancel-tus-upload"
+            ]
+          },
+          {
+            "group": "Organizations",
+            "pages": [
+              "api-reference/organizations/list-all-active-organizations",
+              "api-reference/organizations/register-a-new-organization-and-admin-user",
+              "api-reference/organizations/set-up-an-organization-for-an-authenticated-user",
+              "api-reference/organizations/get-an-organization-by-id",
+              "api-reference/organizations/update-organization-details",
+              "api-reference/organizations/soft-delete-an-organization",
+              "api-reference/organizations/cancel-scheduled-organization-deletion",
+              "api-reference/organizations/list-organization-members",
+              "api-reference/organizations/revoke-a-members-organization-access",
+              "api-reference/organizations/request-organization-data-export",
+              "api-reference/organizations/get-organization-export-status"
+            ]
+          },
+          {
+            "group": "Projects",
+            "pages": [
+              "api-reference/project/get-projects",
+              "api-reference/project/post-projects",
+              "api-reference/project/get-project",
+              "api-reference/project/put-projects",
+              "api-reference/project/delete-projects"
+            ]
+          },
+          {
+            "group": "Project Analytics",
+            "pages": [
+              "api-reference/project/get-projects-analytics-metrics",
+              "api-reference/project/get-projects-analytics-evaluations",
+              "api-reference/project/get-projects-analytics-distribution",
+              "api-reference/project/get-projects-analytics-response-time",
+              "api-reference/project/get-projects-analytics-top-flags"
+            ]
+          },
+          {
+            "group": "Flags",
+            "pages": [
+              "api-reference/flags/get-projects-flags",
+              "api-reference/flags/post-projects-flags",
+              "api-reference/flags/get-projects-flags-1",
+              "api-reference/flags/put-projects-flags",
+              "api-reference/flags/delete-projects-flags",
+              "api-reference/flags/get-projects-environments-flags",
+              "api-reference/flags/get-flags-metrics"
+            ]
+          },
+          {
+            "group": "Flag Targeting Rules",
+            "pages": [
+              "api-reference/flag-targeting-rules/list-targeting-rules",
+              "api-reference/flag-targeting-rules/create-targeting-rule",
+              "api-reference/flag-targeting-rules/get-targeting-rule",
+              "api-reference/flag-targeting-rules/update-targeting-rule",
+              "api-reference/flag-targeting-rules/delete-targeting-rule",
+              "api-reference/flag-targeting-rules/reorder-targeting-rules"
+            ]
+          },
+          {
+            "group": "Flag Variations",
+            "pages": [
+              "api-reference/flag-variations/get-projects-flags-variations",
+              "api-reference/flag-variations/put-projects-flags-variations",
+              "api-reference/flag-variations/delete-projects-flags-variations",
+              "api-reference/flag-variations/put-projects-flags-variationsreorder"
+            ]
+          },
+          {
+            "group": "Flag Values",
+            "pages": [
+              "api-reference/flag-values/get-flag-value",
+              "api-reference/flag-values/delete-flag-value"
+            ]
+          },
+          {
+            "group": "Rollouts",
+            "pages": [
+              "api-reference/rollouts/list-rollouts",
+              "api-reference/rollouts/create-rollout",
+              "api-reference/rollouts/get-rollout",
+              "api-reference/rollouts/update-rollout",
+              "api-reference/rollouts/delete-rollout"
+            ]
+          },
+          {
+            "group": "Segments",
+            "pages": [
+              "api-reference/segments/list-segments",
+              "api-reference/segments/create-a-new-segment",
+              "api-reference/segments/get-segment-details",
+              "api-reference/segments/update-a-segment",
+              "api-reference/segments/delete-a-segment",
+              "api-reference/segments/get-segment-usage"
+            ]
+          },
+          {
+            "group": "Environments",
+            "pages": ["api-reference/environments"]
+          },
+          {
+            "group": "Attributes",
+            "pages": [
+              "api-reference/attributes/list-attributes",
+              "api-reference/attributes/create-custom-attribute",
+              "api-reference/attributes/get-attribute",
+              "api-reference/attributes/update-custom-attribute",
+              "api-reference/attributes/deactivate-attribute",
+              "api-reference/attributes/delete-custom-attribute"
+            ]
+          },
+          {
+            "group": "API Keys",
+            "pages": [
+              "api-reference/api-keys/list-api-keys-for-a-project",
+              "api-reference/api-keys/create-a-new-api-key",
+              "api-reference/api-keys/revoke-an-api-key"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/endpoint/get",
+              "api-reference/endpoint/create",
+              "api-reference/endpoint/delete",
+              "api-reference/endpoint/webhook"
+            ]
+          },
+          {
+            "group": "Billing",
+            "pages": [
+              "api-reference/billing/get-current-month-usage-for-organization",
+              "api-reference/billing/list-invoices-for-an-organization",
+              "api-reference/billing/get-a-single-invoice",
+              "api-reference/billing/get-billingportal",
+              "api-reference/billing/post-billingsession",
+              "api-reference/billing/submit-a-custom-plan-inquiry",
+              "api-reference/billing/stripe-webhook-handler",
+              "api-reference/organization-billing/add-organization-billing-information"
+            ]
+          },
+          {
+            "group": "Plans",
+            "pages": [
+              "api-reference/plans/get-plan-limitsplans",
+              "api-reference/plans/post-plan-limitsplans",
+              "api-reference/plans/get-plan-limitsplans-1",
+              "api-reference/plans/put-plan-limitsplans",
+              "api-reference/plans/delete-plan-limitsplans"
+            ]
+          },
+          {
+            "group": "Audit Logs",
+            "pages": [
+              "api-reference/audit/get-audit-logs",
+              "api-reference/audit/get-auditevent-types",
+              "api-reference/audit/get-audit-statistics",
+              "api-reference/audit/request-audit-logs-export",
+              "api-reference/audit/get-audit-logs-export-status"
+            ]
+          },
+          {
+            "group": "Observability",
+            "pages": [
+              "api-reference/observability/get-contextsobserved-contexts"
+            ]
+          },
+          {
+            "group": "Public",
+            "pages": [
+              "api-reference/public/submit-a-contact-sales-form"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "seo": { "indexHiddenPages": false },
+  "feedback": { "thumbsRating": true, "suggestEdit": true }
 }

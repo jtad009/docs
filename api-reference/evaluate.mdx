@@ -1,0 +1,173 @@
+---
+title: "Evaluation Endpoint"
+description: "Evaluate feature flags for a given context via the REST API."
+---
+
+The evaluation endpoint is the primary way to get flag values when you're not using an SDK, or when testing from tools like Postman or curl.
+
+## Evaluate Flags
+
+<ParamField body="context" type="object" required>
+  The evaluation context containing user and/or organisation attributes. Targeting rules match against this context.
+</ParamField>
+
+### Request
+
+```bash
+POST /evaluator/evaluate
+Authorization: Bearer ff_your_sdk_key
+Content-Type: application/json
+```
+
+```json
+{
+  "context": {
+    "kind": "multi",
+    "user": {
+      "kind": "user",
+      "key": "user-123",
+      "email": "alice@example.com",
+      "country": "IE",
+      "plan": "pro"
+    },
+    "organization": {
+      "kind": "organization",
+      "key": "org-456"
+    }
+  }
+}
+```
+
+### Response
+
+```json 200 OK
+{
+  "new-checkout": true,
+  "button-color": "green",
+  "max-items": 25,
+  "api-config": {
+    "retries": 3,
+    "timeout": 5000
+  }
+}
+```
+
+The response is a flat object where each key is a flag key and each value is the evaluated result for the given context.
+
+### Context Shapes
+
+**Single-kind context** — use when you only need user attributes:
+
+```json
+{
+  "context": {
+    "kind": "user",
+    "key": "user-123",
+    "country": "IE"
+  }
+}
+```
+
+**Multi-kind context** — use when targeting both user and organisation:
+
+```json
+{
+  "context": {
+    "kind": "multi",
+    "user": { "kind": "user", "key": "user-123", "plan": "pro" },
+    "organization": { "kind": "organization", "key": "org-456" }
+  }
+}
+```
+
+**Empty context** — evaluates all flags with defaults only (no targeting rules match):
+
+```json
+{
+  "context": {}
+}
+```
+
+<Info>
+  Percentage rollouts require a `key` field in the context (typically `user.key`). Without it, the evaluator cannot deterministically assign users to variations.
+</Info>
+
+## Authentication
+
+The evaluation endpoint uses your **SDK key** (not a JWT or admin key). SDK keys start with `ff_` and are scoped to a specific project and environment.
+
+Pass the key as a Bearer token:
+
+```
+Authorization: Bearer ff_177331b0f7adabf1b75e026762c1acc005bff9d244eff5ebe98d1aff69c2df34
+```
+
+SDK keys only grant access to the evaluation endpoint. They cannot create, update, or delete flags.
+
+## Error Responses
+
+| Status | Meaning | Common Cause |
+|--------|---------|--------------|
+| `400` | Bad Request | Malformed JSON or missing required fields |
+| `401` | Unauthorised | Invalid, expired, or revoked SDK key |
+| `429` | Too Many Requests | Rate limit exceeded (check `X-RateLimit-Remaining` header) |
+| `500` | Internal Server Error | Server-side issue — retry with backoff |
+
+### Error response body
+
+```json
+{
+  "error": "Invalid API key",
+  "statusCode": 401
+}
+```
+
+## Rate Limiting
+
+The evaluation endpoint returns rate limit headers:
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | Maximum requests per window |
+| `X-RateLimit-Remaining` | Requests remaining in current window |
+| `X-RateLimit-Reset` | Unix timestamp when the window resets |
+
+When rate limited (429), the SDK should use cached values and retry after the reset time.
+
+## Caching Behaviour
+
+The server caches flag configuration in Redis with a 10-second TTL. This means:
+
+- Flag changes in the dashboard are reflected within 10 seconds on the REST endpoint
+- WebSocket transport pushes changes immediately (no cache delay)
+- Under high load, most requests are served from cache without hitting the database
+
+## Testing with curl
+
+```bash
+curl -X POST https://api.flagmint.com/evaluator/evaluate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ff_your_sdk_key" \
+  -d '{
+    "context": {
+      "kind": "user",
+      "key": "test-user-1",
+      "country": "IE"
+    }
+  }'
+```
+
+## Testing with the SDK Tester
+
+For visual testing without writing code, use the [Flagmint SDK Tester](/resources/troubleshooting#sdk-tester) — a standalone app that connects to the evaluation endpoint and displays flags in real-time.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api-reference/authentication">
+    SDK keys vs admin keys, scoping, and rotation.
+  </Card>
+  <Card title="React SDK" icon="react" href="/sdks/react">
+    Use the SDK instead of raw API calls for caching, real-time updates, and offline support.
+  </Card>
+</CardGroup>

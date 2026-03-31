@@ -1,0 +1,140 @@
+---
+title: "Plans & Pricing"
+description: "Flagmint charges per organisation, not per seat. Free forever on the starter plan."
+---
+
+Flagmint uses **per-organisation flat-rate pricing**. Add your entire team — developers, product managers, QA engineers — without per-seat charges.
+
+All prices are in EUR (€). All plans include EU data residency and GDPR compliance.
+
+## Plans
+
+<CardGroup cols={2}>
+  <Card title="Free" icon="gift">
+    **€0/month** — forever
+
+    - 1 project
+    - 5 feature flags
+    - 500 API calls/month
+    - WebSocket and long-polling transport
+    - Community support
+
+    Throttled (not blocked) after the limit. Your SDK continues working with cached values.
+  </Card>
+  <Card title="Pro" icon="rocket">
+    **€29/month** or €290/year (save ~17%)
+
+    - 3 projects
+    - 25 flags per project
+    - 5 environments
+    - 50,000 API calls/month
+    - Percentage rollouts and targeting rules
+    - Email support
+    - DPA available
+  </Card>
+  <Card title="Growth" icon="chart-line">
+    **€79/month** or €790/year (save ~17%)
+
+    - 10 projects
+    - Unlimited flags
+    - 10 environments
+    - 500,000 API calls/month
+    - A/B testing and segments
+    - Scheduled flag changes
+    - Webhooks
+    - Advanced analytics
+    - 90-day audit log
+    - Priority support
+    - DPA included
+  </Card>
+  <Card title="Custom" icon="building">
+    **Contact sales** — contract-based
+
+    - Unlimited everything
+    - Custom API call limits (no overage)
+    - SSO / SAML (SP-only)
+    - Audit log export
+    - Custom SLA
+    - Dedicated support
+    - DPA included
+
+    [Contact sales →](mailto:sales@flagmint.com)
+  </Card>
+</CardGroup>
+
+## What Counts as an API Call?
+
+<AccordionGroup>
+  <Accordion title="Billable">
+    - SDK flag evaluation (REST `POST /evaluator/evaluate`)
+    - WebSocket context update (each `{ type: 'context' }` message)
+    - Flag management writes (create, update, delete flags/rules/segments)
+  </Accordion>
+  <Accordion title="Not billable">
+    - WebSocket ping/pong (heartbeat)
+    - Initial WebSocket connection
+    - Health checks
+    - Authentication requests
+    - Failed requests (4xx, 5xx)
+    - Read operations (listing flags, viewing settings)
+  </Accordion>
+</AccordionGroup>
+
+## Overage
+
+If you exceed your plan's included API calls, overage billing applies:
+
+| Plan | Overage Rate | Billing Unit |
+|------|-------------|--------------|
+| Free | No overage — throttled instead | — |
+| Pro | €4 per extra 1M calls | Full 1M blocks (rounded up) |
+| Growth | €3.50 per extra 1M calls | Full 1M blocks (rounded up) |
+| Custom | No overage — contract-based | — |
+
+A **20% grace buffer** is applied before overage charges begin. For example, on the Pro plan (50K included), overage starts after 60K calls.
+
+<Info>
+  Free plan users are never charged. When you hit the limit, your SDK continues working with cached flag values — evaluations are throttled, not blocked.
+</Info>
+
+## Feature Comparison
+
+| Feature | Free | Pro | Growth | Custom |
+|---------|------|-----|--------|--------|
+| Projects | 1 | 3 | 10 | Unlimited |
+| Flags per project | 5 | 25 | Unlimited | Unlimited |
+| Environments | 2 | 5 | 10 | Unlimited |
+| API calls/month | 500 | 50K | 500K | Custom |
+| Targeting rules | ✓ | ✓ | ✓ | ✓ |
+| Percentage rollouts | ✓ | ✓ | ✓ | ✓ |
+| Segments | — | ✓ | ✓ | ✓ |
+| A/B testing | — | ✓ | ✓ | ✓ |
+| Scheduled changes | — | — | ✓ | ✓ |
+| Webhooks | — | — | ✓ | ✓ |
+| Analytics | Basic | Standard | Advanced | Advanced |
+| Audit log | 7 days | 30 days | 90 days | Custom |
+| Audit export | — | — | — | ✓ |
+| SSO / SAML | — | — | — | ✓ |
+| SLA | — | — | — | Custom |
+| DPA | On request | ✓ | ✓ | ✓ |
+| Support | Community | Email | Priority | Dedicated |
+
+## FAQ
+
+<AccordionGroup>
+  <Accordion title="Can I switch plans at any time?">
+    Yes. Upgrade or downgrade from **Settings → Billing** in the dashboard. Upgrades take effect immediately. Downgrades take effect at the end of your current billing period.
+  </Accordion>
+  <Accordion title="What happens if I cancel my paid plan?">
+    Your organisation downgrades to the Free plan at the end of the billing period. Your flags and data are retained, but features beyond the Free plan limits become unavailable.
+  </Accordion>
+  <Accordion title="Do you offer a trial?">
+    Paid plans include a 14-day free trial. No credit card required to start.
+  </Accordion>
+  <Accordion title="Is there a discount for annual billing?">
+    Yes. Annual billing saves approximately 17% — equivalent to two months free. Pro: €290/year (€24/month). Growth: €790/year (€66/month).
+  </Accordion>
+  <Accordion title="Where is my data stored?">
+    All data is stored exclusively within the European Union. See [Data Residency](/security/data-residency) for details.
+  </Accordion>
+</AccordionGroup>

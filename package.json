@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "docs:import": "./scripts/import-openapi.sh",
+    "docs:fix": "python3 fix-openapi-pipeline.py"
+  }
+}

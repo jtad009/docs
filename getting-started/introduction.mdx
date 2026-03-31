@@ -1,0 +1,60 @@
+---
+title: "What is Flagmint?"
+description: "Feature flag management built for European teams. EU data residency, GDPR-native, no per-seat pricing."
+---
+
+## Overview
+
+Flagmint is a feature flag management platform that lets development teams control which features are on or off in their applications — without pushing new code.
+
+Create a flag in the dashboard, integrate our SDK, and you can toggle features, run A/B tests, and perform gradual rollouts from a central control panel. All data stays in the EU.
+
+## Why Flagmint?
+
+<CardGroup cols={2}>
+  <Card title="EU Data Residency" icon="shield-check">
+    All data stored exclusively within the European Union on EU-based infrastructure. No data leaves the EEA.
+  </Card>
+  <Card title="GDPR-Native" icon="lock">
+    Built from day one with GDPR compliance. Data Processing Agreements available for all paid plans.
+  </Card>
+  <Card title="No Per-Seat Pricing" icon="users">
+    Pay per organisation, not per developer. Add your whole team without watching costs scale with headcount.
+  </Card>
+  <Card title="Real-Time Updates" icon="bolt">
+    Toggle a flag in the dashboard and every connected SDK picks up the change instantly via WebSocket.
+  </Card>
+</CardGroup>
+
+## How It Works
+
+<Steps>
+  <Step title="Create a flag">
+    In the Flagmint dashboard, create a feature flag with a key, type, and variations. For example, a boolean flag called `new_checkout` with variations `true` and `false`.
+  </Step>
+  <Step title="Integrate the SDK">
+    Install the Flagmint SDK in your app (React, Vue, or Node.js). Wrap your app with the provider and pass your SDK key.
+  </Step>
+  <Step title="Target your users">
+    Add targeting rules to control who sees what. Target by user attributes, segments, percentage rollouts, or any custom property.
+  </Step>
+  <Step title="Control features live">
+    Toggle flags, adjust rollouts, and kill problematic features — all from the dashboard, all in real-time, no deployment needed.
+  </Step>
+</Steps>
+
+## Use Cases
+
+- **Safe feature releases** — Deploy code with a feature hidden behind a flag. Turn it on when you're ready, roll back instantly if something goes wrong.
+- **Gradual rollouts** — Release to 5% of users, monitor, then increase to 25%, 50%, 100%. The same user always sees the same variation.
+- **A/B testing** — Show different variations to different user groups and measure which performs better.
+- **Kill switches** — Every critical feature should have an emergency off switch. One click in the dashboard, the feature is disabled globally.
+- **Environment-specific configuration** — Different flag values for development, staging, and production.
+
+## Who Is Flagmint For?
+
+Flagmint is built for development teams who ship features to production and need control over what their users see. If your team is in the EU (or serves EU customers), and you need GDPR compliance without the complexity and per-seat cost of US-based alternatives, Flagmint is designed for you.
+
+<Card title="Ready to start?" icon="rocket" href="/getting-started/quickstart">
+  Get your first flag running in 5 minutes.
+</Card>

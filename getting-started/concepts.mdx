@@ -1,0 +1,164 @@
+---
+title: "Core Concepts"
+description: "Key terms and concepts you'll encounter when working with Flagmint."
+---
+
+## Feature Flag
+
+A feature flag is a switch that controls whether a piece of functionality is active in your application. Every flag has three parts:
+
+- **Key** — a unique identifier (e.g., `new-checkout`). Use kebab-case. This is what you reference in your code.
+- **Type** — boolean, string, number, or JSON. Determines what kind of value the flag returns.
+- **Variations** — the possible values the flag can return. A boolean flag has `true` and `false`. A string flag might have `"blue"`, `"green"`, and `"red"`.
+
+```tsx
+// In your code, a flag evaluation looks like this:
+const variant = useFlag<string>('button-color', 'blue');
+// Returns "blue", "green", or "red" depending on the flag's configuration
+```
+
+## Variations
+
+Every flag has at least two variations. The SDK evaluates the flag and returns one variation based on the targeting rules you've configured.
+
+| Flag Type | Example Variations |
+|-----------|-------------------|
+| Boolean   | `true`, `false` |
+| String    | `"blue"`, `"green"`, `"red"` |
+| Number    | `10`, `25`, `50` |
+| JSON      | `{ "maxRetries": 3, "timeout": 5000 }` |
+
+Each flag has a **default variation** (served when no targeting rules match) and an **off variation** (served when the flag is inactive / kill-switched).
+
+## Targeting Rules
+
+Targeting rules determine which variation a user sees. Rules are evaluated in priority order — the first matching rule wins.
+
+Each rule has:
+- **Conditions** — attribute checks like `user.country equals "IE"` or `user.plan in ["pro", "growth"]`
+- **Variation** — the value to serve when conditions match
+
+<Accordion title="Available operators">
+  - `equals` / `not equals`
+  - `contains` / `not contains`
+  - `starts with` / `ends with`
+  - `in list` / `not in list`
+  - `greater than` / `less than`
+  - `matches regex`
+</Accordion>
+
+**Example:**
+
+| Priority | Condition | Serves |
+|----------|-----------|--------|
+| 1 | `user.email ends with "@flagmint.com"` | `true` (internal testing) |
+| 2 | `user.plan equals "pro"` | `true` (pro users) |
+| 3 | Default | `false` (everyone else) |
+
+## Segments
+
+A segment is a reusable group of users defined by attribute conditions. Instead of duplicating targeting rules across flags, create a segment once and reference it everywhere.
+
+**Example segments:**
+- **Beta Testers** — `user.email ends with "@flagmint.com"`
+- **Enterprise Customers** — `organization.plan equals "custom"`
+- **EU Users** — `user.country in ["IE", "NL", "DE", "FR", "ES", "IT", ...]`
+
+When you update a segment's conditions, every flag using that segment reflects the change automatically.
+
+## Rollouts
+
+A rollout gradually releases a feature to a percentage of users rather than all at once.
+
+Rollouts are **deterministic** — the same user always sees the same variation. This is achieved by hashing the user's key, so a user who sees the feature at 10% will still see it at 25%, 50%, and 100%.
+
+**Typical rollout pattern:**
+
+| Stage | Percentage | Purpose |
+|-------|-----------|---------|
+| Canary | 5% | Catch major issues early |
+| Early access | 25% | Validate with a larger group |
+| Broad | 50% | Build confidence |
+| Full | 100% | Complete rollout |
+
+<Info>
+  Rollouts require a `user.key` (or equivalent unique identifier) in the evaluation context. Without it, the SDK can't deterministically assign users.
+</Info>
+
+## Kill Switch
+
+When a flag's `is_active` property is set to `false`, it acts as a kill switch. The SDK returns the **off variation** for that flag regardless of any targeting rules.
+
+Use kill switches for:
+- Emergency rollbacks when a feature causes issues in production
+- Scheduled maintenance windows
+- Disabling features for compliance reasons
+
+Activating a kill switch takes effect within seconds across all connected SDKs.
+
+## Evaluation Context
+
+The evaluation context is the information your SDK sends to Flagmint when evaluating flags. Targeting rules match against this context.
+
+**Single-kind context:**
+```json
+{
+  "kind": "user",
+  "key": "user-123",
+  "email": "alice@example.com",
+  "country": "IE",
+  "plan": "pro"
+}
+```
+
+**Multi-kind context:**
+```json
+{
+  "kind": "multi",
+  "user": {
+    "kind": "user",
+    "key": "user-123",
+    "email": "alice@example.com"
+  },
+  "organization": {
+    "kind": "organization",
+    "key": "org-456",
+    "plan": "growth"
+  }
+}
+```
+
+Multi-kind contexts let you target based on both user and organisation attributes in the same rule.
+
+## Environments
+
+Every project has multiple environments — typically **Development**, **Staging**, and **Production**. Each environment has:
+
+- Its own SDK key
+- Its own flag values and targeting rules
+- Separate evaluation metrics
+
+This means you can test a flag in staging without affecting production. Always use the correct environment's SDK key.
+
+## Projects
+
+A project is a logical grouping of flags. Use separate projects for separate applications (e.g., "Web App", "Mobile App", "Internal Tools"). Each project has its own set of environments and flag keys.
+
+Flag keys must be unique within a project but can be reused across projects.
+
+## Organisations
+
+An organisation is the top-level boundary in Flagmint. It represents your company or team. Billing, access control, and API keys are all scoped to the organisation.
+
+Each organisation can have multiple projects, and each project can have multiple environments.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Your First Flag" icon="flag" href="/getting-started/your-first-flag">
+    Put these concepts into practice with a hands-on tutorial.
+  </Card>
+  <Card title="Targeting Rules" icon="crosshairs" href="/platform/targeting-rules">
+    Deep dive into conditions, operators, and rule ordering.
+  </Card>
+</CardGroup>
