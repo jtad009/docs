@@ -45,15 +45,15 @@
             ]
           },
           {
-            "group": "Platform",
+            "group": "Concepts & Features",
             "pages": [
-              "platform/flags",
-              "platform/targeting-rules",
-              "platform/segments",
-              "platform/rollouts",
-              "platform/environments",
-              "platform/projects",
-              "platform/organisations"
+              "concepts/flags",
+              "concepts/targeting-rules",
+              "concepts/segments",
+              "concepts/rollouts",
+              "concepts/environments",
+              "concepts/projects",
+              "concepts/organisations"
             ]
           },
           {

@@ -1,97 +1,140 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Flagmint Documentation"
+description: "GDPR-compliant feature flag management for European teams"
 ---
 
-## Setting up
+Flagmint is a feature flag management platform built for the European market. Ship features safely with kill switches, gradual rollouts, A/B testing, and targeting rules — all with EU data residency and GDPR compliance by default.
 
-Get your documentation site up and running in minutes.
+## Get Started
 
 <Card
-  title="Start here"
+  title="Quick Start"
   icon="rocket"
   href="/quickstart"
   horizontal
 >
-  Follow our three step quickstart guide.
+  Create your first feature flag and integrate the SDK in minutes.
 </Card>
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
+## Core Concepts
 
 <Columns cols={2}>
   <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
+    title="Feature Flags"
+    icon="flag"
+    href="/concepts/feature-flags"
   >
-    Edit your docs locally and preview them in real time.
+    Boolean, string, number, and JSON flags with per-environment configuration.
   </Card>
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
+    title="Targeting Rules"
+    icon="crosshairs"
+    href="/concepts/targeting-rules"
   >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+    Control who sees what with segments, custom rules, and logical operators.
   </Card>
   <Card
-    title="API documentation"
+    title="Rollouts"
+    icon="chart-line"
+    href="/concepts/targeting-rules#rollout-strategies"
+  >
+    Percentage rollouts, variant experiments, and time-based gradual rollouts.
+  </Card>
+  <Card
+    title="Segments"
+    icon="users"
+    href="/concepts/targeting-rules#segment-rules"
+  >
+    Reusable audience definitions with AND, OR, and NOT logic.
+  </Card>
+</Columns>
+
+## SDKs
+
+<Columns cols={2}>
+  <Card
+    title="Node.js / JavaScript"
+    icon="js"
+    href="/sdks/nodejs"
+  >
+    Framework-agnostic SDK with WebSocket and long-polling transport, offline caching, and TypeScript support.
+  </Card>
+  <Card
+    title="React"
+    icon="react"
+    href="/sdks/react"
+  >
+    React hooks and components for feature flag evaluation with real-time updates.
+  </Card>
+  <Card
+    title="Vue.js"
+    icon="vuejs"
+    href="/sdks/vuejs"
+  >
+    Vue 3 composables and plugins for feature flag integration.
+  </Card>
+  <Card
+    title="REST API"
     icon="terminal"
-    href="/api-reference/introduction"
+    href="/api-reference/evaluation"
   >
-    Auto-generate API documentation from OpenAPI specifications.
+    Evaluate flags over HTTP for any language or platform.
   </Card>
 </Columns>
 
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
+## Platform
 
 <Columns cols={2}>
   <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
+    title="Projects & Environments"
+    icon="folder"
+    href="/platform/projects"
   >
-    Use MDX to style your docs pages.
+    Organize flags by project with separate development, staging, and production environments.
   </Card>
   <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
+    title="Plans & Pricing"
+    icon="credit-card"
+    href="/platform/pricing"
   >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
+    Free, Pro, and Growth plans with flat per-org pricing — no per-seat fees.
   </Card>
 </Columns>
 
-## Need inspiration?
+## Security & Compliance
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Columns cols={2}>
+  <Card
+    title="GDPR & Privacy"
+    icon="shield-halved"
+    href="/compliance/gdpr"
+  >
+    EU data residency, minimal data collection, and a Data Processing Agreement for all paid plans.
+  </Card>
+  <Card
+    title="Security"
+    icon="lock"
+    href="/compliance/security"
+  >
+    Encryption at rest and in transit, role-based access controls, and 72-hour breach notification.
+  </Card>
+</Columns>
+
+## Resources
+
+<Columns cols={2}>
+  <Card
+    title="Blog"
+    icon="newspaper"
+    href="/blog"
+  >
+    Guides on EU data residency, GDPR compliance, and feature flag best practices.
+  </Card>
+  <Card
+    title="Support"
+    icon="envelope"
+    href="mailto:support@flagmint.com"
+  >
+    Reach our team at support@flagmint.com.
+  </Card>
+</Columns>

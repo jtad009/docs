@@ -1,0 +1,445 @@
+---
+title: "Segments"
+description: "Define reusable audiences for targeting rules with flexible logical operators"
+---
+
+# Segments
+
+Segments are reusable audience definitions that group users based on shared attributes. Instead of duplicating the same conditions across multiple flags, define a segment once and reference it from any targeting rule.
+
+## How Segments Work
+
+A segment is a named collection of conditions with a logical operator that determines how those conditions are combined. When a targeting rule references a segment, Flagmint evaluates the segment's conditions against the flattened evaluation context.
+
+```
+Targeting rule references segment
+  → Load segment definition
+  → Flatten evaluation context
+  → Evaluate conditions using segment's logical operator
+    → AND: All conditions must match
+    → OR:  Any condition can match
+    → NOT: All conditions must fail
+  → Return true/false
+```
+
+Segments are evaluated as part of the [targeting rules](/concepts/targeting-rules) pipeline. A segment on its own doesn't determine what value to return — the targeting rule that references it decides whether to serve a variation or apply a rollout.
+
+## Creating a Segment
+
+You can create segments from the Flagmint dashboard or via the API.
+
+### From the Dashboard
+
+Navigate to **Segments** in the sidebar under Feature Management, then click **+ New Segment**.
+
+<img src="/images/segments-empty.png" alt="Segments list page showing empty state with Create Segment button" />
+
+Fill in the segment details: a name, an optional key (alphanumeric with dashes and underscores), and an optional description. Then add your targeting rules using the **+ Add Rule** button.
+
+<img src="/images/segments-create.png" alt="Create New Segment form with fields for name, key, description, and targeting rules" />
+
+<Tip>
+  The segment key is auto-generated from the name if not provided. Keys must match the pattern `^[a-zA-Z0-9-_]+$` and are unique within a project.
+</Tip>
+
+### Via the API
+
+```bash
+curl -X POST https://api.flagmint.com/projects/{projectId}/segments \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "EU Premium Users",
+    "key": "eu_premium_users",
+    "description": "Users on premium or growth plans in the EU",
+    "logical_op": "AND",
+    "rules": [
+      {
+        "type": "rule",
+        "attribute": "user.plan",
+        "operator": "in",
+        "value": ["premium", "growth"]
+      },
+      {
+        "type": "rule",
+        "attribute": "organization.country",
+        "operator": "in",
+        "value": ["DE", "NL", "FR", "IE", "AT", "BE"]
+      }
+    ]
+  }'
+```
+
+## Segment Structure
+
+A segment consists of a name, a logical operator, and a list of conditions.
+
+```json
+{
+  "id": "eu_premium_users",
+  "name": "EU Premium Users",
+  "key": "eu_premium_users",
+  "logical_op": "AND",
+  "rules": [
+    {
+      "type": "rule",
+      "attribute": "user.plan",
+      "operator": "in",
+      "value": ["premium", "growth"]
+    },
+    {
+      "type": "rule",
+      "attribute": "organization.country",
+      "operator": "in",
+      "value": ["DE", "NL", "FR", "IE", "AT", "BE"]
+    }
+  ]
+}
+```
+
+This segment matches users who are on a premium or growth plan **and** whose organization is in one of the listed EU countries.
+
+## Logical Operators
+
+The `logical_op` field controls how a segment's conditions are combined. If omitted, it defaults to `AND`.
+
+### AND (default)
+
+All conditions must match for the segment to match. This is the most common operator — use it when you need users to satisfy every criterion.
+
+```json
+{
+  "id": "enterprise_admins",
+  "name": "Enterprise Admins",
+  "logical_op": "AND",
+  "rules": [
+    { "type": "rule", "attribute": "user.plan", "operator": "eq", "value": "enterprise" },
+    { "type": "rule", "attribute": "user.role", "operator": "eq", "value": "admin" }
+  ]
+}
+```
+
+Matches users who are on the enterprise plan **and** have an admin role.
+
+### OR
+
+Any condition can match for the segment to match. Use this when users need to satisfy at least one criterion.
+
+```json
+{
+  "id": "internal_users",
+  "name": "Internal Users",
+  "logical_op": "OR",
+  "rules": [
+    { "type": "rule", "attribute": "user.email", "operator": "endsWith", "value": "@flagmint.com" },
+    { "type": "rule", "attribute": "user.email", "operator": "endsWith", "value": "@acme.com" },
+    { "type": "rule", "attribute": "custom.is_internal", "operator": "eq", "value": "true" }
+  ]
+}
+```
+
+Matches users with a Flagmint email **or** an Acme email **or** the `is_internal` custom attribute set to true.
+
+### NOT
+
+All conditions must fail for the segment to match. This inverts the logic — the segment matches users who do **not** satisfy any of the conditions.
+
+```json
+{
+  "id": "non_free_users",
+  "name": "Non-Free Users",
+  "logical_op": "NOT",
+  "rules": [
+    { "type": "rule", "attribute": "user.plan", "operator": "eq", "value": "free" }
+  ]
+}
+```
+
+Matches any user who is **not** on the free plan.
+
+<Note>
+  `NOT` negates the result of evaluating all conditions with AND logic. So `NOT` with conditions A and B matches when `!(A AND B)` — meaning it matches if either condition fails. For excluding users who match *any* condition, use `AND` with `neq` or `nin` operators instead.
+</Note>
+
+## Conditions
+
+Each condition in a segment evaluates a single attribute against a value using an operator. Conditions reference attributes from the [flattened evaluation context](/concepts/targeting-rules#context-flattening).
+
+```json
+{
+  "type": "rule",
+  "attribute": "organization.country",
+  "operator": "in",
+  "value": ["DE", "FR", "NL"]
+}
+```
+
+Every condition must include `"type": "rule"`. This is reserved for future extensions.
+
+### Available Operators
+
+| Operator | Description | Value Type |
+|----------|-------------|------------|
+| `eq` | Equals | Any |
+| `neq` | Not equals | Any |
+| `in` | Is in list | Array |
+| `nin` | Not in list | Array |
+| `gt` | Greater than | Number |
+| `lt` | Less than | Number |
+| `contains` | String contains substring | String |
+| `not_contains` | String does not contain | String |
+| `startsWith` | String starts with prefix | String |
+| `endsWith` | String ends with suffix | String |
+| `exists` | Attribute is present | — |
+| `not_exists` | Attribute is absent | — |
+
+For detailed operator behavior including type coercion rules, see the [Operators reference](/concepts/targeting-rules#operators).
+
+## Force Match
+
+A segment with `force: true` always matches, regardless of its conditions. This is useful for testing or emergency overrides where you need a targeting rule to apply unconditionally without modifying or deleting the segment's conditions.
+
+```json
+{
+  "id": "beta_testers",
+  "name": "Beta Testers",
+  "force": true,
+  "logical_op": "AND",
+  "rules": [
+    { "type": "rule", "attribute": "user.plan", "operator": "eq", "value": "enterprise" }
+  ]
+}
+```
+
+Even though the condition targets enterprise users, `force: true` means this segment matches everyone. Remove the `force` flag to restore normal evaluation.
+
+## Using Segments in Targeting Rules
+
+Segments are referenced by ID in targeting rules. A targeting rule specifies the segment to evaluate and what to return when the segment matches — either a variation or a rollout.
+
+### With a variation
+
+Return a specific value when the segment matches:
+
+```json
+{
+  "kind": "segment",
+  "segment_id": "eu_premium_users",
+  "order_index": 0,
+  "variation_id": "var_enabled"
+}
+```
+
+### With a rollout
+
+Apply a rollout strategy when the segment matches:
+
+```json
+{
+  "kind": "segment",
+  "segment_id": "eu_premium_users",
+  "order_index": 1,
+  "rollout_id": "rollout_ab_test"
+}
+```
+
+### Multiple segments on the same flag
+
+You can reference different segments in different targeting rules on the same flag. Since targeting rules use [first-match-wins](/concepts/targeting-rules#rule-ordering-and-first-match-wins) evaluation, order matters.
+
+```json
+{
+  "targeting_rules": [
+    {
+      "kind": "segment",
+      "segment_id": "internal_users",
+      "order_index": 0,
+      "variation_id": "var_enabled"
+    },
+    {
+      "kind": "segment",
+      "segment_id": "eu_premium_users",
+      "order_index": 1,
+      "rollout_id": "rollout_50_percent"
+    }
+  ]
+}
+```
+
+Internal users always get the feature. EU premium users who aren't internal go through the 50% rollout. Everyone else gets the fallback.
+
+## Segment Usage Tracking
+
+Flagmint tracks how many flags reference each segment. This helps you understand the impact of modifying or deleting a segment.
+
+### Check usage before modifying
+
+Before changing a segment's conditions or logical operator, check which flags depend on it:
+
+```bash
+curl https://api.flagmint.com/projects/{projectId}/segments/{segmentId}/usage \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Response:**
+
+```json
+{
+  "usage_count": 3,
+  "used_in_flags": [
+    { "id": "flag_1", "name": "New Dashboard", "environment": "production" },
+    { "id": "flag_2", "name": "New Dashboard", "environment": "staging" },
+    { "id": "flag_3", "name": "Premium Feature", "environment": "production" }
+  ]
+}
+```
+
+<Warning>
+  Changes to segment conditions or logical operators immediately affect all flags that reference the segment. Switching from `AND` to `OR` can significantly broaden who matches. Check usage first and consider creating a new segment instead of modifying a heavily-used one.
+</Warning>
+
+### Deletion protection
+
+Segments that are currently referenced by targeting rules cannot be deleted. The API returns a `400` error if you attempt to delete a segment that is in use. Remove the segment from all targeting rules first, or replace it with an alternative segment.
+
+## Segments vs Custom Rules
+
+Both segments and custom rules let you define conditions for targeting. The difference is reusability.
+
+| | Segments | Custom Rules |
+|---|---------|-------------|
+| **Defined** | Separately, referenced by ID | Inline on the targeting rule |
+| **Reusable** | Yes — use across multiple flags | No — scoped to a single rule |
+| **Logical operators** | AND, OR, NOT | AND, OR, NOT |
+| **Best for** | Audiences you target repeatedly (e.g. "EU Enterprise", "Beta Testers") | One-off conditions specific to a single flag |
+
+Use segments when you find yourself writing the same conditions on multiple flags. If a condition only applies to one flag, a custom rule keeps things simpler.
+
+## Managing Segments
+
+### Updating a segment
+
+Updates are partial — only the fields you include in the request body are modified. Omitted fields retain their current values.
+
+```bash
+curl -X PUT https://api.flagmint.com/projects/{projectId}/segments/{segmentId} \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "logical_op": "OR",
+    "rules": [
+      { "type": "rule", "attribute": "organization.country", "operator": "eq", "value": "DE" },
+      { "type": "rule", "attribute": "organization.country", "operator": "eq", "value": "FR" }
+    ]
+  }'
+```
+
+All segment changes are recorded in the [Audit Log](/platform/audit-log) with before/after diffs for each modified field.
+
+### Deleting a segment
+
+Deletion is a soft delete — the segment is marked as deleted but not permanently removed from the database.
+
+```bash
+curl -X DELETE https://api.flagmint.com/projects/{projectId}/segments/{segmentId} \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+Returns `204 No Content` on success. Returns `400` if the segment is currently in use by any targeting rules.
+
+### Permissions
+
+| Action | Required Role |
+|--------|--------------|
+| List / view segments | Authenticated user with project access |
+| Create / update / delete segments | Editor role |
+
+## API Reference
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/projects/{projectId}/segments` | Create a new segment |
+| `GET` | `/projects/{projectId}/segments` | List all segments (paginated, searchable) |
+| `GET` | `/projects/{projectId}/segments/{segmentId}` | Get segment details |
+| `PUT` | `/projects/{projectId}/segments/{segmentId}` | Update a segment |
+| `GET` | `/projects/{projectId}/segments/{segmentId}/usage` | Get segment usage |
+| `DELETE` | `/projects/{projectId}/segments/{segmentId}` | Soft delete a segment |
+
+The list endpoint supports pagination (`page`, `limit`), search (`search` query param matching name or key), and sorting (`sort`, `dir`).
+
+## Examples
+
+### Geographic targeting
+
+Target users in the DACH region (Germany, Austria, Switzerland):
+
+```json
+{
+  "name": "DACH Region",
+  "key": "dach_region",
+  "logical_op": "OR",
+  "rules": [
+    { "type": "rule", "attribute": "organization.country", "operator": "eq", "value": "DE" },
+    { "type": "rule", "attribute": "organization.country", "operator": "eq", "value": "AT" },
+    { "type": "rule", "attribute": "organization.country", "operator": "eq", "value": "CH" }
+  ]
+}
+```
+
+<Note>
+  This could also be written as a single condition with the `in` operator: `{ "type": "rule", "attribute": "organization.country", "operator": "in", "value": ["DE", "AT", "CH"] }` with `AND` logic. The `OR` approach is shown here for clarity on how the operator works.
+</Note>
+
+### Plan-based tiering
+
+Target users on paid plans:
+
+```json
+{
+  "name": "Paid Users",
+  "key": "paid_users",
+  "logical_op": "AND",
+  "rules": [
+    {
+      "type": "rule",
+      "attribute": "user.plan",
+      "operator": "nin",
+      "value": ["free"]
+    }
+  ]
+}
+```
+
+### Large organizations with specific domains
+
+Target large organizations with approved email domains:
+
+```json
+{
+  "name": "Enterprise Partners",
+  "key": "enterprise_partners",
+  "logical_op": "AND",
+  "rules": [
+    { "type": "rule", "attribute": "organization.employeeCount", "operator": "gt", "value": 500 },
+    { "type": "rule", "attribute": "user.email", "operator": "endsWith", "value": "@partner.com" }
+  ]
+}
+```
+
+### Excluding specific users
+
+Target everyone except users on a legacy plan:
+
+```json
+{
+  "name": "Non-Legacy Users",
+  "key": "non_legacy",
+  "logical_op": "AND",
+  "rules": [
+    { "type": "rule", "attribute": "user.plan", "operator": "neq", "value": "legacy" },
+    { "type": "rule", "attribute": "user.plan", "operator": "exists" }
+  ]
+}
+```
+
+The `exists` condition ensures we only match users who have a plan attribute set, avoiding false matches on users with no plan information.

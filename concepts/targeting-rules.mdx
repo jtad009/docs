@@ -1,0 +1,462 @@
+---
+title: "Targeting Rules"
+description: "Control who sees what with attribute rules, segments, rollouts, and gradual rollouts"
+---
+
+# Targeting Rules
+
+Targeting rules let you control which users, organizations, or contexts receive a specific flag variation. Flagmint evaluates rules in priority order — the first rule that matches determines the result. If no rules match, the flag's fallback value is returned.
+
+## How Evaluation Works
+
+When a flag is evaluated, Flagmint follows this sequence:
+
+1. **Flatten the context** — The nested evaluation context (user, organization, custom) is flattened into a simple key-value map for attribute matching.
+2. **Evaluate targeting rules in order** — Rules are processed by `order_index`, lowest first. The first matching rule wins.
+3. **Serve the matched rule's result** — A matched rule can return either a specific variation or a rollout result.
+4. **Fall back** — If no rules match, the flag's fallback value is returned, coerced to the expected type.
+
+For flags without targeting rules, the evaluation is simpler: if a rollout is configured, it is applied directly. Otherwise, the flag's base value is returned.
+
+```
+Context arrives → Flatten context
+  → Has targeting rules?
+    → Yes → Evaluate rules in order_index order
+      → Rule matches?
+        → Has variation_id? → Return that variation's value
+        → Has rollout_id?   → Apply rollout strategy → Return result
+        → Neither?          → Return fallback (misconfigured rule)
+      → No match → Next rule
+    → All rules checked, none matched → Return fallback value
+  → No targeting rules?
+    → Has rollout? → Apply rollout → Return result
+    → No rollout  → Return base value
+```
+
+## Context Flattening
+
+Before rules are evaluated, the nested evaluation context is flattened into a simple key-value map. This is how attribute paths in rules map to context values.
+
+**Nested context:**
+
+```json
+{
+  "kind": "multi",
+  "user": {
+    "kind": "user",
+    "key": "user123",
+    "email": "alice@example.com",
+    "plan": "premium"
+  },
+  "organization": {
+    "kind": "organization",
+    "key": "org456",
+    "country": "DE",
+    "employeeCount": 50
+  },
+  "custom": {
+    "source": "mobile_app"
+  }
+}
+```
+
+**Flattened result:**
+
+| Attribute | Value |
+|-----------|-------|
+| `user.key` | `"user123"` |
+| `user.email` | `"alice@example.com"` |
+| `user.plan` | `"premium"` |
+| `organization.key` | `"org456"` |
+| `organization.country` | `"DE"` |
+| `organization.employeeCount` | `50` |
+| `custom.source` | `"mobile_app"` |
+
+Rule attributes like `user.plan` or `organization.country` reference keys in this flattened map.
+
+## Rule Types
+
+Flagmint supports two kinds of targeting rules: **segment rules** and **custom rules**. Each rule can optionally reference a variation (return a specific value) or a rollout (apply a rollout strategy).
+
+### Segment Rules
+
+Segment rules reference a predefined, reusable segment by ID. A segment contains its own set of conditions and a logical operator that determines how those conditions are combined.
+
+```json
+{
+  "kind": "segment",
+  "segment_id": "beta_users",
+  "order_index": 0,
+  "variation_id": "var_enabled"
+}
+```
+
+**Segment definition:**
+
+```json
+{
+  "id": "beta_users",
+  "name": "Beta Users",
+  "logical_op": "AND",
+  "rules": [
+    {
+      "attribute": "user.plan",
+      "operator": "in",
+      "value": ["premium", "growth"]
+    },
+    {
+      "attribute": "organization.country",
+      "operator": "in",
+      "value": ["DE", "NL", "FR", "IE"]
+    }
+  ]
+}
+```
+
+#### Segment Logical Operators
+
+Segments support three logical operators that control how their conditions are combined:
+
+| Operator | Behavior | Description |
+|----------|----------|-------------|
+| `AND` (default) | All conditions must match | User must match every condition |
+| `OR` | Any condition can match | User matches if at least one condition is true |
+| `NOT` | No conditions should match | User matches only if all conditions are false |
+
+**Example — OR segment (any EU country):**
+
+```json
+{
+  "id": "eu_users",
+  "name": "EU Users",
+  "logical_op": "OR",
+  "rules": [
+    { "attribute": "organization.country", "operator": "eq", "value": "DE" },
+    { "attribute": "organization.country", "operator": "eq", "value": "FR" },
+    { "attribute": "organization.country", "operator": "eq", "value": "NL" }
+  ]
+}
+```
+
+<Note>
+  A segment with `force: true` always matches regardless of its conditions. This is useful for testing or emergency overrides.
+</Note>
+
+### Custom Rules
+
+Custom rules define conditions inline on the targeting rule itself, without referencing a reusable segment. Like segments, custom rules support logical operators.
+
+```json
+{
+  "kind": "custom",
+  "order_index": 1,
+  "logical_op": "AND",
+  "conditions": [
+    {
+      "attribute": "user.plan",
+      "operator": "eq",
+      "value": "enterprise"
+    },
+    {
+      "attribute": "organization.employeeCount",
+      "operator": "gt",
+      "value": 100
+    }
+  ],
+  "variation_id": "var_enterprise_feature"
+}
+```
+
+Custom rules support the same `AND`, `OR`, and `NOT` logical operators as segments.
+
+## Operators
+
+Conditions within segments and custom rules use operators to compare attribute values. All string comparisons are case-sensitive.
+
+| Operator | Description | Value Type | Example |
+|----------|-------------|------------|---------|
+| `eq` | Equals | Any | `user.plan` eq `"premium"` |
+| `neq` | Not equals | Any | `user.plan` neq `"free"` |
+| `in` | Is in list | Array | `organization.country` in `["DE", "FR", "NL"]` |
+| `nin` | Not in list | Array | `organization.country` nin `["US", "CN"]` |
+| `gt` | Greater than | Number | `organization.employeeCount` gt `10` |
+| `lt` | Less than | Number | `organization.employeeCount` lt `100` |
+| `contains` | String contains substring | String | `user.email` contains `"@acme.com"` |
+| `not_contains` | String does not contain substring | String | `user.email` not_contains `"@test.com"` |
+| `startsWith` | String starts with prefix | String | `user.email` startsWith `"admin"` |
+| `endsWith` | String ends with suffix | String | `user.email` endsWith `"@flagmint.com"` |
+| `exists` | Attribute is present | — | `user.email` exists |
+| `not_exists` | Attribute is absent | — | `user.phone` not_exists |
+
+<Note>
+  The `gt` and `lt` operators coerce both sides to numbers. If either value cannot be parsed as a number, the condition does not match. The `eq` and `neq` operators include special handling for boolean and numeric string comparisons — for example, the string `"true"` will match a boolean `true` attribute.
+</Note>
+
+## Rule Ordering and First-Match Wins
+
+Targeting rules are evaluated in `order_index` order (lowest first). The **first rule that matches** determines the result — subsequent rules are not evaluated.
+
+This means rule order matters. Place more specific rules (like individual user overrides) before broader rules (like segment-based rollouts).
+
+**Example — override for a specific user before a general rollout:**
+
+```json
+{
+  "targeting_rules": [
+    {
+      "kind": "custom",
+      "order_index": 0,
+      "conditions": [
+        { "attribute": "user.key", "operator": "eq", "value": "user_alice" }
+      ],
+      "variation_id": "var_enabled"
+    },
+    {
+      "kind": "segment",
+      "order_index": 1,
+      "segment_id": "eu_premium",
+      "rollout_id": "rollout_50_percent"
+    }
+  ]
+}
+```
+
+Alice always gets the enabled variation. Everyone else matching the `eu_premium` segment goes through the 50% rollout.
+
+## Rule Outcomes
+
+When a rule matches, it must specify what to return. There are two options:
+
+### Variation
+
+A `variation_id` returns a specific, predefined value. Variations are configured per flag and can be of any type (boolean, string, number, JSON).
+
+```json
+{
+  "kind": "custom",
+  "order_index": 0,
+  "conditions": [{ "attribute": "user.plan", "operator": "eq", "value": "enterprise" }],
+  "variation_id": "var_premium_feature"
+}
+```
+
+### Rollout
+
+A `rollout_id` references a rollout configuration, which dynamically determines the value based on the user's hash bucket. See [Rollout Strategies](#rollout-strategies) below.
+
+```json
+{
+  "kind": "segment",
+  "order_index": 1,
+  "segment_id": "all_users",
+  "rollout_id": "rollout_ab_test"
+}
+```
+
+## Rollout Strategies
+
+Flagmint supports four rollout strategies: **off**, **percentage**, **variant**, and **gradual**.
+
+### Off
+
+The `off` strategy explicitly disables the rollout and returns the flag's fallback value. Useful for pausing a rollout without deleting the configuration.
+
+```json
+{
+  "strategy": "off"
+}
+```
+
+### Percentage
+
+Percentage rollouts are boolean-only. They determine whether a user is "in" (feature enabled) or "out" (fallback value). This is the simplest way to progressively enable a feature.
+
+```json
+{
+  "strategy": "percentage",
+  "percentage": 25,
+  "salt": "experiment-2026-q2"
+}
+```
+
+- Users whose hash bucket falls below the percentage get `true`
+- Users above the percentage get the flag's fallback value
+- A percentage of `100` short-circuits and returns `true` for all targeted users
+
+<Warning>
+  Percentage rollouts only work with boolean flags. If applied to a string, number, or JSON flag, the evaluator logs a warning and returns the fallback value. Use variant rollouts for non-boolean experiments.
+</Warning>
+
+### Variant
+
+Variant rollouts split users into buckets, each receiving a different variation value. This is how you run A/B tests and multi-variant experiments. Variant rollouts work with any flag type (boolean, string, number, JSON).
+
+```json
+{
+  "strategy": "variant",
+  "salt": "checkout-experiment",
+  "variants": [
+    { "variation_id": "var_control", "weight": 50 },
+    { "variation_id": "var_redesign", "weight": 30 },
+    { "variation_id": "var_minimal", "weight": 20 }
+  ]
+}
+```
+
+Weights represent percentages and must sum to exactly 100. This is validated at configuration time — if weights don't sum to 100, the configuration is rejected.
+
+**How variant assignment works:**
+
+1. The user's stable key is combined with the salt
+2. A hash produces a deterministic bucket (0–99)
+3. The bucket maps to a variant based on cumulative weights
+
+Using the example above: users hashing to 0–49 get `var_control`, 50–79 get `var_redesign`, and 80–99 get `var_minimal`.
+
+<Note>
+  Variant rollouts reference `variation_id` values, not raw values. The variation's configured value and type are looked up and coerced to the flag's expected type. If a variant references a missing variation, the fallback value is returned.
+</Note>
+
+### Gradual
+
+Gradual rollouts progressively increase the percentage of users who see a feature over time. Like percentage rollouts, they are boolean-only.
+
+```json
+{
+  "strategy": "gradual",
+  "salt": "new-dashboard-rollout",
+  "target_percentage": 100,
+  "increment": 10,
+  "interval_hours": 24,
+  "start_at": "2026-04-01T00:00:00Z"
+}
+```
+
+This configuration starts at 0% and adds 10% every 24 hours until reaching 100%:
+
+| Day | Percentage |
+|-----|-----------|
+| Day 0 (Apr 1) | 0% |
+| Day 1 (Apr 2) | 10% |
+| Day 2 (Apr 3) | 20% |
+| ... | ... |
+| Day 10 (Apr 11) | 100% |
+| Day 11+ | 100% (capped at target) |
+
+<Note>
+  Gradual rollouts are computed based on elapsed time from `start_at`. If `start_at` is in the future, the rollout returns 0% until that time. If `start_at` is omitted, the rollout starts immediately.
+</Note>
+
+**Validation rules for gradual rollouts:**
+
+- `target_percentage` must be between 0 and 100
+- `increment` must be between 0 and 100
+- `interval_hours` must be greater than 0
+- `start_at` (if provided) must be a valid ISO 8601 date-time string
+
+## Consistent Hashing
+
+All rollout strategies that involve user bucketing (percentage, variant, gradual) use consistent hashing to ensure stable assignment. The same user always receives the same rollout result as long as the salt remains unchanged.
+
+The stable key used for hashing is resolved in this order:
+
+1. `user.key` (from `kind: "user"` or `kind: "multi"` with a `user` block)
+2. `user_id` (legacy flat context)
+
+If no stable key is found, the rollout returns the fallback value with a warning.
+
+**Changing the salt redistributes all users.** This is useful when you want to re-randomize an experiment without changing the targeting rules.
+
+## Type Coercion
+
+All flag values are coerced to the flag's expected type before being returned. This ensures consistent types regardless of how the value is stored.
+
+| Expected Type | Coercion Behavior |
+|---------------|-------------------|
+| `boolean` | `"true"` → `true`, `"false"` → `false`, otherwise `Boolean(value)` |
+| `number` | `Number(value)`, returns `0` if not a valid number |
+| `string` | `String(value)`, returns `""` for null/undefined |
+| `json` | Must be a non-null, non-array object, otherwise returns `{}` |
+
+## Examples
+
+### Feature gate for enterprise users
+
+```json
+{
+  "targeting_rules": [
+    {
+      "kind": "custom",
+      "order_index": 0,
+      "conditions": [
+        { "attribute": "user.plan", "operator": "eq", "value": "enterprise" }
+      ],
+      "variation_id": "var_enabled"
+    }
+  ]
+}
+```
+
+Enterprise users get the enabled variation. Everyone else gets the fallback.
+
+### Gradual rollout to all users
+
+```json
+{
+  "targeting_rules": [],
+  "rollout": {
+    "strategy": "gradual",
+    "salt": "new-dashboard",
+    "target_percentage": 100,
+    "increment": 10,
+    "interval_hours": 24,
+    "start_at": "2026-04-15T00:00:00Z"
+  }
+}
+```
+
+No targeting rules means all users are eligible. The gradual rollout increases coverage by 10% per day.
+
+### A/B test for a segment with user override
+
+```json
+{
+  "targeting_rules": [
+    {
+      "kind": "custom",
+      "order_index": 0,
+      "conditions": [
+        { "attribute": "user.key", "operator": "eq", "value": "user_qa_lead" }
+      ],
+      "variation_id": "var_redesign"
+    },
+    {
+      "kind": "segment",
+      "order_index": 1,
+      "segment_id": "eu_enterprise",
+      "rollout_id": "rollout_pricing_ab"
+    }
+  ]
+}
+```
+
+The QA lead always sees the redesign. All other EU enterprise users are split by the rollout.
+
+### Kill switch
+
+A flag with no targeting rules, no rollout, and `is_active = true` acts as a simple on/off toggle. The base value is returned for every evaluation. Set `is_active = false` or use a rollout with `strategy: "off"` to disable it.
+
+### Email domain targeting
+
+```json
+{
+  "kind": "custom",
+  "order_index": 0,
+  "conditions": [
+    { "attribute": "user.email", "operator": "endsWith", "value": "@acme.com" }
+  ],
+  "variation_id": "var_internal_feature"
+}
+```
+
+Only users with `@acme.com` email addresses see the feature.
